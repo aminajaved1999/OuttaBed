@@ -1,132 +1,144 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static const cream = Color(0xFFFFF8F3);
-  static const blush = Color(0xFFFFE8EE);
-  static const lavender = Color(0xFFF0E8FF);
-  static const peach = Color(0xFFFFD6A5);
-  static const coral = Color(0xFFFF8FAB);
-  static const rose = Color(0xFFFF6B9D);
-  static const violet = Color(0xFFB8A9E8);
-  static const plum = Color(0xFF4A3F55);
-  static const plumSoft = Color(0xFF7A6B8A);
-  static const white = Color(0xFFFFFFFF);
-  static const nightTop = Color(0xFF2D1B4E);
-  static const nightBottom = Color(0xFF5B2C6F);
+  static const voidBlack = Color(0xFF07070D);
+  static const ink = Color(0xFF0F0F18);
+  static const surface = Color(0xFF161622);
+  static const lime = Color(0xFFD4FF00);
+  static const limeDim = Color(0x99D4FF00);
+  static const hotPink = Color(0xFFFF006B);
+  static const pinkGlow = Color(0xFFFF4D9E);
+  static const electric = Color(0xFF00F0FF);
+  static const white = Color(0xFFF8F8FF);
+  static const muted = Color(0xFF8B8B9E);
+  static const stroke = Color(0xFF2A2A3C);
+
+  // legacy aliases used in some widgets
+  static const cream = voidBlack;
+  static const blush = surface;
+  static const lavender = surface;
+  static const peach = lime;
+  static const coral = hotPink;
+  static const rose = pinkGlow;
+  static const violet = electric;
+  static const plum = white;
+  static const plumSoft = muted;
+  static const nightTop = voidBlack;
+  static const nightBottom = ink;
 }
 
 class AppTheme {
-  static const _fontFamily = 'Nunito';
+  static const displayFont = 'Syne';
+  static const bodyFont = 'DMSans';
 
-  static TextTheme get _textTheme => const TextTheme(
-        displayLarge: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w200),
-        displayMedium: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w300),
-        displaySmall: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w300),
-        headlineMedium: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w800),
-        headlineSmall: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w800),
-        titleMedium: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w700),
-        titleLarge: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w700),
-        bodyLarge: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w600),
-        bodyMedium: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w600),
-        bodySmall: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w600),
-        labelLarge: TextStyle(fontFamily: _fontFamily, fontWeight: FontWeight.w800),
+  static TextStyle display(double size, {FontWeight weight = FontWeight.w800}) =>
+      TextStyle(fontFamily: displayFont, fontSize: size, fontWeight: weight, height: 1.0);
+
+  static TextStyle body(double size, {FontWeight weight = FontWeight.w500, Color? color}) =>
+      TextStyle(
+        fontFamily: bodyFont,
+        fontSize: size,
+        fontWeight: weight,
+        color: color ?? AppColors.muted,
+        height: 1.3,
       );
 
-  static ThemeData get light {
-    final base = ThemeData(
+  static ThemeData get dark {
+    return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
-      fontFamily: _fontFamily,
-      colorScheme: ColorScheme.light(
-        primary: AppColors.coral,
-        onPrimary: AppColors.white,
-        secondary: AppColors.violet,
+      brightness: Brightness.dark,
+      fontFamily: bodyFont,
+      scaffoldBackgroundColor: AppColors.voidBlack,
+      colorScheme: const ColorScheme.dark(
+        primary: AppColors.lime,
+        onPrimary: AppColors.voidBlack,
+        secondary: AppColors.hotPink,
         onSecondary: AppColors.white,
-        surface: AppColors.cream,
-        onSurface: AppColors.plum,
-        surfaceContainerHighest: AppColors.white,
+        surface: AppColors.surface,
+        onSurface: AppColors.white,
       ),
-      scaffoldBackgroundColor: AppColors.cream,
-      textTheme: _textTheme,
-      splashFactory: InkSparkle.splashFactory,
-    );
-
-    return base.copyWith(
+      textTheme: TextTheme(
+        displayLarge: display(72, weight: FontWeight.w800),
+        displayMedium: display(56, weight: FontWeight.w800),
+        displaySmall: display(44, weight: FontWeight.w700),
+        headlineLarge: display(32, weight: FontWeight.w800),
+        headlineMedium: display(26, weight: FontWeight.w700),
+        headlineSmall: display(22, weight: FontWeight.w700),
+        titleLarge: body(18, weight: FontWeight.w700, color: AppColors.white),
+        titleMedium: body(16, weight: FontWeight.w600, color: AppColors.white),
+        bodyLarge: body(16, weight: FontWeight.w500),
+        bodyMedium: body(14, weight: FontWeight.w500),
+        bodySmall: body(12, weight: FontWeight.w500),
+        labelLarge: body(14, weight: FontWeight.w700, color: AppColors.lime),
+      ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.plum,
-        titleTextStyle: const TextStyle(
-          fontFamily: _fontFamily,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-          color: AppColors.plum,
-        ),
-      ),
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: AppColors.coral,
         foregroundColor: AppColors.white,
-        elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titleTextStyle: display(22, weight: FontWeight.w800).copyWith(color: AppColors.white),
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: AppColors.coral,
-        inactiveTrackColor: AppColors.blush,
-        thumbColor: AppColors.rose,
-        overlayColor: AppColors.coral.withValues(alpha: 0.15),
+        activeTrackColor: AppColors.lime,
+        inactiveTrackColor: AppColors.stroke,
+        thumbColor: AppColors.hotPink,
+        overlayColor: AppColors.lime.withValues(alpha: 0.12),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.white,
+        fillColor: AppColors.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
+          borderSide: const BorderSide(color: AppColors.stroke, width: 2),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.blush, width: 2),
+          borderSide: const BorderSide(color: AppColors.stroke, width: 2),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.coral, width: 2),
+          borderSide: const BorderSide(color: AppColors.lime, width: 2),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        labelStyle: const TextStyle(
-          fontFamily: _fontFamily,
-          color: AppColors.plumSoft,
-        ),
+        labelStyle: body(14, color: AppColors.muted),
+        hintStyle: body(14, color: AppColors.muted),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: AppColors.plum,
+        backgroundColor: AppColors.surface,
+        contentTextStyle: body(14, color: AppColors.white),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.stroke),
+        ),
       ),
     );
   }
 }
 
 class AppGradients {
-  static const home = LinearGradient(
+  static const chaos = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFFFFF5F7), Color(0xFFF3EEFF), Color(0xFFFFF8F0)],
-    stops: [0.0, 0.55, 1.0],
+    colors: [Color(0xFF07070D), Color(0xFF12081A), Color(0xFF0A1020)],
   );
 
   static const ring = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [AppColors.nightTop, AppColors.nightBottom, Color(0xFF8E3A6F)],
-    stops: [0.0, 0.5, 1.0],
+    colors: [Color(0xFF07070D), Color(0xFF1A0028), Color(0xFF3D0040)],
   );
 
   static const cardAccent = LinearGradient(
-    colors: [AppColors.coral, AppColors.rose],
+    colors: [AppColors.lime, Color(0xFFB8E600)],
+  );
+
+  static const pinkAccent = LinearGradient(
+    colors: [AppColors.hotPink, AppColors.pinkGlow],
   );
 
   static const fab = LinearGradient(
-    colors: [Color(0xFFFF8FAB), Color(0xFFFF6B9D)],
+    colors: [AppColors.lime, Color(0xFFA8E000)],
   );
+
+  static const home = chaos;
 }

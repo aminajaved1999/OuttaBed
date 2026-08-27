@@ -21,4 +21,9 @@ class SpeakerRouting {
       // Best-effort on unsupported platforms.
     }
   }
+
+  /// Preview sounds through whatever is connected (earbuds, speaker, etc.).
+  static Future<void> useDefaultAudioRoute() async {
+    await restoreAudioRouting();
+  }
 }

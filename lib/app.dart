@@ -68,7 +68,7 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
       navigatorKey: _navigatorKey,
       title: 'OuttaBed',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
       home: const HomeScreen(),
     );
   }

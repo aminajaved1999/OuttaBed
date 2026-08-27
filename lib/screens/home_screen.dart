@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: _loading
-              ? const Center(child: CircularProgressIndicator(color: AppColors.coral))
+              ? const Center(child: CircularProgressIndicator(color: AppColors.lime))
               : CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(child: _HomeHeader(onSettings: _requestPermissions)),
@@ -199,41 +199,37 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(24, 24, 16, 4),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('😮‍💨', style: TextStyle(fontSize: 44)),
-                Text(
-                  'outtabed',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.plum,
-                        letterSpacing: -1.5,
-                      ),
+          Row(
+            children: [
+              StickerBadge(text: 'NO SNOOZE LOST', color: AppColors.hotPink, tilt: -0.08),
+              const Spacer(),
+              IconButton(
+                onPressed: onSettings,
+                icon: const Icon(Icons.tune_rounded, color: AppColors.lime),
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.surface,
+                  side: const BorderSide(color: AppColors.stroke),
                 ),
-                Text(
-                  'your earbuds can stay connected.\nyour alarm still hits the speaker.',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: AppColors.plumSoft,
-                        fontWeight: FontWeight.w700,
-                        height: 1.35,
-                      ),
-                ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'outta\nbed',
+            style: AppTheme.display(52, weight: FontWeight.w800).copyWith(
+              color: AppColors.white,
+              height: 0.95,
+              letterSpacing: -2,
             ),
           ),
-          IconButton.filledTonal(
-            onPressed: onSettings,
-            icon: const Icon(Icons.tune_rounded, size: 22),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.white.withValues(alpha: 0.85),
-              foregroundColor: AppColors.plum,
-            ),
+          const SizedBox(height: 10),
+          Text(
+            'earbuds stay connected.\nalarm still hits the speaker.',
+            style: AppTheme.body(16, weight: FontWeight.w500).copyWith(height: 1.4),
           ),
         ],
       ),
@@ -252,35 +248,21 @@ class _BudsStatusCard extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: SoftCard(
         padding: const EdgeInsets.all(20),
-        gradient: connected
-            ? LinearGradient(
-                colors: [
-                  AppColors.violet.withValues(alpha: 0.35),
-                  AppColors.coral.withValues(alpha: 0.25),
-                ],
-              )
-            : null,
+        tilt: connected ? -0.02 : 0.02,
+        accent: connected ? AppColors.electric : AppColors.lime,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              connected ? '🎧 buds detected' : '🔊 speaker mode locked in',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: AppColors.plum,
-              ),
+              connected ? '🎧 buds detected' : '🔊 speaker locked',
+              style: AppTheme.display(20, weight: FontWeight.w800).copyWith(color: AppColors.white),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
               connected
                   ? "don't worry. i've got the morning."
-                  : 'no buds connected rn — still gonna yell through your phone.',
-              style: const TextStyle(
-                color: AppColors.plumSoft,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-              ),
+                  : 'no buds rn — alarm still screams from your phone.',
+              style: AppTheme.body(15, weight: FontWeight.w500),
             ),
           ],
         ),
@@ -301,25 +283,14 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('💤', style: TextStyle(fontSize: 88)),
-          const SizedBox(height: 16),
-          Text(
-            'no alarms yet',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.plum,
-                ),
-          ),
+          Text('Zzz', style: AppTheme.display(80, weight: FontWeight.w800).copyWith(color: AppColors.stroke)),
+          const SizedBox(height: 8),
+          Text('no alarms', style: AppTheme.display(28, weight: FontWeight.w800).copyWith(color: AppColors.white)),
           const SizedBox(height: 10),
-          const Text(
-            'set one before you doomscroll into sleep.',
+          Text(
+            'set one before the doomscroll wins.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.plumSoft,
-              fontWeight: FontWeight.w700,
-              fontSize: 17,
-              height: 1.4,
-            ),
+            style: AppTheme.body(16),
           ),
           const SizedBox(height: 28),
           PillButton(label: 'create alarm', icon: Icons.add_rounded, onPressed: onAdd),
@@ -376,6 +347,8 @@ class _AlarmCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: SoftCard(
         onTap: onTap,
+        tilt: alarm.enabled ? 0.015 : -0.01,
+        accent: alarm.enabled ? AppColors.lime : AppColors.stroke,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
         child: Row(
           children: [
@@ -385,23 +358,17 @@ class _AlarmCard extends StatelessWidget {
                 children: [
                   Text(
                     alarm.timeLabel,
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          fontWeight: FontWeight.w200,
-                          color: muted
-                              ? AppColors.plumSoft.withValues(alpha: 0.5)
-                              : AppColors.plum,
-                          letterSpacing: -2,
-                        ),
+                    style: AppTheme.display(44, weight: FontWeight.w800).copyWith(
+                      color: muted ? AppColors.muted : AppColors.lime,
+                      letterSpacing: -2,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     alarm.label,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: muted
-                              ? AppColors.plumSoft.withValues(alpha: 0.5)
-                              : AppColors.plum,
-                        ),
+                    style: AppTheme.display(18, weight: FontWeight.w700).copyWith(
+                      color: muted ? AppColors.muted : AppColors.white,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Wrap(
@@ -433,16 +400,13 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.blush.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.stroke),
       ),
       child: Text(
         '$emoji $text',
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          color: AppColors.plumSoft,
-        ),
+        style: AppTheme.body(11, weight: FontWeight.w700).copyWith(color: AppColors.muted),
       ),
     );
   }
@@ -465,26 +429,23 @@ class _CuteFab extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
-                color: AppColors.coral.withValues(alpha: 0.4),
+                color: AppColors.lime.withValues(alpha: 0.25),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 18),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add_rounded, color: AppColors.white, size: 26),
-                SizedBox(width: 10),
+                const Icon(Icons.add_rounded, color: AppColors.voidBlack, size: 26),
+                const SizedBox(width: 10),
                 Text(
-                  'new alarm',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
+                  '+ alarm',
+                  style: AppTheme.display(18, weight: FontWeight.w800)
+                      .copyWith(color: AppColors.voidBlack),
                 ),
               ],
             ),

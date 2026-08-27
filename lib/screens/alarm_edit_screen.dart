@@ -99,7 +99,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
       _deviceTitle = sound.title;
     });
     if (!widget.previewOnly) {
-      AlarmSoundPreview.instance.previewDevice(sound.uri, sound.title, volume: _volume);
+      AlarmSoundPreview.instance.previewDevice(sound.uri, volume: _volume);
     }
   }
 
@@ -120,7 +120,19 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: AppColors.coral),
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.lime,
+              onPrimary: AppColors.voidBlack,
+              surface: AppColors.surface,
+              onSurface: AppColors.white,
+            ),
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: AppColors.surface,
+              hourMinuteTextColor: AppColors.lime,
+              dialHandColor: AppColors.hotPink,
+              dialBackgroundColor: AppColors.voidBlack,
+              entryModeIconColor: AppColors.muted,
+            ),
           ),
           child: MediaQuery(
             data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
@@ -193,31 +205,38 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
         body: ListView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
           children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                StickerBadge(text: 'SOUND + VIBRATE', color: AppColors.hotPink, tilt: -0.05),
+                StickerBadge(text: 'SPEAKER LOCK', color: AppColors.lime, tilt: 0.07),
+              ],
+            ),
+            const SizedBox(height: 20),
             GestureDetector(
               onTap: _pickTime,
               child: SoftCard(
                 padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-                gradient: LinearGradient(
-                  colors: [
-                    AppColors.lavender.withValues(alpha: 0.5),
-                    AppColors.blush.withValues(alpha: 0.5),
-                  ],
-                ),
+                tilt: -0.015,
+                accent: AppColors.lime,
                 child: Column(
                   children: [
-                    const Text('☀️', style: TextStyle(fontSize: 36)),
                     Text(
                       _formatTime(_time),
-                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                            fontWeight: FontWeight.w200,
-                            color: AppColors.plum,
-                            fontSize: 64,
-                            letterSpacing: -3,
-                          ),
+                      style: AppTheme.display(68, weight: FontWeight.w800).copyWith(
+                        color: AppColors.lime,
+                        letterSpacing: -3,
+                        height: 1,
+                      ),
                     ),
-                    const Text(
+                    const SizedBox(height: 8),
+                    Text(
                       'tap to change',
-                      style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w700),
+                      style: AppTheme.body(14, weight: FontWeight.w600).copyWith(
+                        color: AppColors.muted,
+                        letterSpacing: 1.5,
+                      ),
                     ),
                   ],
                 ),
@@ -227,10 +246,10 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             TextField(
               controller: _labelController,
               readOnly: widget.previewOnly,
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: AppTheme.body(16, weight: FontWeight.w700).copyWith(color: AppColors.white),
               decoration: const InputDecoration(
                 labelText: 'alarm name',
-                prefixIcon: Icon(Icons.label_outline_rounded),
+                prefixIcon: Icon(Icons.label_outline_rounded, color: AppColors.lime),
               ),
             ),
             const SizedBox(height: 28),
@@ -247,9 +266,9 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             ),
             const SizedBox(height: 28),
             const SectionTitle(title: 'vibes (sound)', emoji: '🎵'),
-            const Text(
-              'tap to preview — pick what actually wakes you up',
-              style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w700),
+            Text(
+              'preview plays through your earbuds if connected',
+              style: AppTheme.body(13, weight: FontWeight.w500),
             ),
             const SizedBox(height: 12),
             ...AlarmSound.values.map(
@@ -269,7 +288,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             if (_loadingDeviceSounds)
               const Padding(
                 padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator(color: AppColors.coral)),
+                child: Center(child: CircularProgressIndicator(color: AppColors.lime)),
               )
             else ...[
               ..._deviceSounds.take(8).map(
@@ -326,28 +345,32 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                   child: Padding(
                     padding: EdgeInsets.only(right: mins != 15 ? 8 : 0),
                     child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _snoozeMinutes = mins);
-                      },
+                      onTap: widget.previewOnly
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _snoozeMinutes = mins);
+                            },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
                           gradient: selected ? AppGradients.cardAccent : null,
-                          color: selected ? null : AppColors.white,
+                          color: selected ? null : AppColors.surface,
                           borderRadius: BorderRadius.circular(22),
                           border: Border.all(
-                            color: selected ? Colors.transparent : AppColors.blush,
+                            color: selected ? AppColors.lime : AppColors.stroke,
                             width: 2,
                           ),
+                          boxShadow: selected
+                              ? [BoxShadow(color: AppColors.lime.withValues(alpha: 0.25), blurRadius: 12)]
+                              : null,
                         ),
                         child: Text(
                           '$mins min',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            color: selected ? AppColors.white : AppColors.plumSoft,
+                          style: AppTheme.display(15, weight: FontWeight.w800).copyWith(
+                            color: selected ? AppColors.voidBlack : AppColors.muted,
                           ),
                         ),
                       ),

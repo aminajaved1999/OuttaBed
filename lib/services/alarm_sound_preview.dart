@@ -7,6 +7,7 @@ import 'package:just_audio/just_audio.dart';
 import '../models/alarm.dart';
 import 'speaker_routing.dart';
 
+/// Previews alarm sounds through the default audio route (earbuds if connected).
 class AlarmSoundPreview {
   AlarmSoundPreview._();
   static final AlarmSoundPreview instance = AlarmSoundPreview._();
@@ -23,7 +24,7 @@ class AlarmSoundPreview {
     await play(key: sound.name, volume: volume, assetPath: sound.assetPath);
   }
 
-  Future<void> previewDevice(String uri, String title, {required double volume}) async {
+  Future<void> previewDevice(String uri, {required double volume}) async {
     await play(key: uri, volume: volume, deviceUri: uri);
   }
 
@@ -55,17 +56,17 @@ class AlarmSoundPreview {
     final session = await AudioSession.instance;
     await session.configure(const AudioSessionConfiguration(
       avAudioSessionCategory: AVAudioSessionCategory.playback,
-      avAudioSessionCategoryOptions:
-          AVAudioSessionCategoryOptions.duckOthers,
+      avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
       avAudioSessionMode: AVAudioSessionMode.defaultMode,
       androidAudioAttributes: AndroidAudioAttributes(
-        contentType: AndroidAudioContentType.sonification,
-        usage: AndroidAudioUsage.alarm,
+        contentType: AndroidAudioContentType.music,
+        usage: AndroidAudioUsage.media,
       ),
       androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
     ));
 
-    await SpeakerRouting.routeAlarmToSpeaker();
+    // Let system route to earbuds / headphones / speaker — no forced speakerphone.
+    await SpeakerRouting.useDefaultAudioRoute();
 
     if (deviceUri != null) {
       await _player.setAudioSource(AudioSource.uri(Uri.parse(deviceUri)));
@@ -100,6 +101,5 @@ class AlarmSoundPreview {
       await _player.stop();
     }
     previewingKey.value = null;
-    await SpeakerRouting.restoreAudioRouting();
   }
 }

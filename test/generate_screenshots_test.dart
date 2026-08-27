@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:outta_bed/screens/alarm_edit_screen.dart';
 import 'package:outta_bed/screens/alarm_ring_screen.dart';
@@ -16,7 +15,7 @@ void main() {
     return RepaintBoundary(
       key: const ValueKey('screenshot'),
       child: MaterialApp(
-        theme: AppTheme.light,
+        theme: AppTheme.dark,
         home: MediaQuery(
           data: const MediaQueryData(size: phoneSize),
           child: child,

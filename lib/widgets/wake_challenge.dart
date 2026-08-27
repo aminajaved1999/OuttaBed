@@ -87,9 +87,10 @@ class _WakeChallengeSheetState extends State<WakeChallengeSheet>
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 36),
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+        border: Border(top: BorderSide(color: AppColors.lime.withValues(alpha: 0.4), width: 2)),
       ),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 350),
@@ -128,19 +129,15 @@ class _ChallengeView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'QUICK CHECK',
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppColors.plumSoft,
-                letterSpacing: 3,
-                fontWeight: FontWeight.w900,
-              ),
+          style: AppTheme.display(12, weight: FontWeight.w800).copyWith(
+            color: AppColors.lime,
+            letterSpacing: 3,
+          ),
         ),
         const SizedBox(height: 6),
         Text(
           'prove it.',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                color: AppColors.plum,
-              ),
+          style: AppTheme.display(28, weight: FontWeight.w800).copyWith(color: AppColors.white),
         ),
         const SizedBox(height: 24),
         AnimatedBuilder(
@@ -151,20 +148,14 @@ class _ChallengeView extends StatelessWidget {
           },
           child: Text(
             challenge.question,
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.w300,
-                  color: AppColors.plum,
-                ),
+            style: AppTheme.display(40, weight: FontWeight.w800).copyWith(color: AppColors.lime),
           ),
         ),
         if (feedback != null) ...[
           const SizedBox(height: 10),
           Text(
             feedback!,
-            style: TextStyle(
-              color: AppColors.rose,
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTheme.body(14, weight: FontWeight.w700).copyWith(color: AppColors.hotPink),
           ),
         ],
         const SizedBox(height: 24),
@@ -176,19 +167,21 @@ class _ChallengeView extends StatelessWidget {
           childAspectRatio: 2.2,
           physics: const NeverScrollableScrollPhysics(),
           children: challenge.options.map((option) {
-            return Material(
-              color: AppColors.blush.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(22),
-              child: InkWell(
-                onTap: () => onPick(option),
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(22),
-                child: Center(
-                  child: Text(
-                    '$option',
-                    style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.plum,
+                border: Border.all(color: AppColors.stroke),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => onPick(option),
+                  borderRadius: BorderRadius.circular(22),
+                  child: Center(
+                    child: Text(
+                      '$option',
+                      style: AppTheme.display(28, weight: FontWeight.w800).copyWith(color: AppColors.lime),
                     ),
                   ),
                 ),
@@ -207,22 +200,15 @@ class _SuccessView extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('✓', style: TextStyle(fontSize: 72, color: AppColors.coral)),
+        Text('✓', style: AppTheme.display(72, weight: FontWeight.w800).copyWith(color: AppColors.lime)),
         Text(
           "YOU'RE ALIVE",
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: 2,
-              ),
+          style: AppTheme.display(24, weight: FontWeight.w800).copyWith(letterSpacing: 2),
         ),
         const SizedBox(height: 6),
         Text(
           'GOOD MORNING.',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.plumSoft,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.5,
-              ),
+          style: AppTheme.body(16, weight: FontWeight.w700).copyWith(letterSpacing: 1.5),
         ),
       ],
     );

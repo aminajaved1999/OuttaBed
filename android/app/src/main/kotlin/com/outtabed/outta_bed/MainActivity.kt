@@ -100,6 +100,13 @@ class MainActivity : FlutterFragmentActivity() {
                         AlarmRingService.stop(this)
                         result.success(null)
                     }
+                    "startNativeVibration" -> {
+                        // Vibration starts with alarm service; no-op when called standalone.
+                        result.success(null)
+                    }
+                    "stopNativeVibration" -> {
+                        result.success(null)
+                    }
                     "triggerAlarmNow" -> {
                         val alarmId = call.argument<String>("alarmId") ?: return@setMethodCallHandler result.error("arg", "missing alarmId", null)
                         val label = call.argument<String>("label") ?: "OuttaBed"

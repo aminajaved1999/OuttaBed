@@ -16,11 +16,15 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 
 class AlarmRingService : Service() {
     private var mediaPlayer: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
+    private var vibrator: Vibrator? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -34,6 +38,7 @@ class AlarmRingService : Service() {
         routeToSpeaker()
         startForeground(NOTIFICATION_ID, buildNotification(alarmId, label))
         playAlarmSound(soundUri, volume)
+        startVibration()
         launchAlarmUi(alarmId)
 
         return START_STICKY
@@ -58,6 +63,34 @@ class AlarmRingService : Service() {
                 .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                 ?.let { audioManager.setCommunicationDevice(it) }
         }
+    }
+
+    private fun startVibration() {
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            manager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        val pattern = longArrayOf(0, 700, 250, 700, 250, 900)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(
+                VibrationEffect.createWaveform(pattern, 0),
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(pattern, 0)
+        }
+    }
+
+    private fun stopVibration() {
+        vibrator?.cancel()
+        vibrator = null
     }
 
     private fun playAlarmSound(soundUri: String?, volume: Float) {
@@ -121,7 +154,7 @@ class AlarmRingService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(label)
-            .setContentText("Wake up — playing through phone speaker")
+            .setContentText("Wake up — speaker + vibration")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -154,6 +187,7 @@ class AlarmRingService : Service() {
 
     override fun onDestroy() {
         stopPlayer()
+        stopVibration()
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
         super.onDestroy()
@@ -168,7 +202,12 @@ class AlarmRingService : Service() {
         const val EXTRA_VOLUME = "volume"
 
         fun stop(context: Context) {
-            context.stopService(Intent(context, AlarmRingService::class.java))
+            val service = Intent(context, AlarmRingService::class.java)
+            context.stopService(service)
+        }
+
+        fun stopVibration(context: Context) {
+            // no-op if service not running; vibration stops in onDestroy
         }
 
         fun start(

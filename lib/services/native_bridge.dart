@@ -64,6 +64,16 @@ class NativeBridge {
     await _channel.invokeMethod<void>('stopNativeAlarm');
   }
 
+  Future<void> startNativeVibration() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('startNativeVibration');
+  }
+
+  Future<void> stopNativeVibration() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('stopNativeVibration');
+  }
+
   Future<void> triggerAlarmNow({
     required String alarmId,
     required String label,

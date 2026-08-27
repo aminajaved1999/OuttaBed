@@ -8,6 +8,7 @@ import '../models/alarm.dart';
 import '../services/alarm_audio_player.dart';
 import '../services/alarm_scheduler.dart';
 import '../services/alarm_storage.dart';
+import '../services/alarm_vibration.dart';
 import '../services/native_bridge.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
@@ -51,6 +52,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
   Future<void> _startRinging() async {
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     await WakelockPlus.enable();
+    await AlarmVibration.instance.start();
     if (!Platform.isAndroid) {
       await AlarmAudioPlayer.instance.play(widget.alarm);
     }
@@ -58,6 +60,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
 
   Future<void> _stopRinging() async {
     if (widget.previewOnly) return;
+    await AlarmVibration.instance.stop();
     await NativeBridge.instance.stopNativeAlarm();
     await AlarmAudioPlayer.instance.stop();
     await WakelockPlus.disable();
@@ -104,6 +107,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     _pulseController.dispose();
     if (!widget.previewOnly) {
       AlarmAudioPlayer.instance.stop();
+      AlarmVibration.instance.stop();
       WakelockPlus.disable();
     }
     super.dispose();
@@ -126,42 +130,46 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
                   const Spacer(),
                   ScaleTransition(
                     scale: _pulseAnimation,
-                    child: const Text('⏰', style: TextStyle(fontSize: 96)),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    widget.alarm.label,
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w900,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.alarm.timeLabel,
-                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w200,
-                          fontSize: 72,
-                          letterSpacing: -3,
-                        ),
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: const Text(
-                      '📱 blasting from phone speaker',
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
+                    child: Container(
+                      padding: const EdgeInsets.all(28),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.lime.withValues(alpha: 0.5), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.hotPink.withValues(alpha: 0.4),
+                            blurRadius: 40,
+                            spreadRadius: 4,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '!',
+                        style: AppTheme.display(72, weight: FontWeight.w800)
+                            .copyWith(color: AppColors.lime),
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    widget.alarm.label,
+                    style: AppTheme.display(28, weight: FontWeight.w800)
+                        .copyWith(color: AppColors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.alarm.timeLabel,
+                    style: AppTheme.display(64, weight: FontWeight.w800).copyWith(
+                      color: AppColors.lime,
+                      letterSpacing: -2,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  StickerBadge(
+                    text: 'SPEAKER + VIBRATE',
+                    color: AppColors.hotPink,
+                    tilt: 0.05,
                   ),
                   const Spacer(),
                   if (!_showChallenge) ...[

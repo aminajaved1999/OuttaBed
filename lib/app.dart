@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'screens/alarm_ring_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/alarm_storage.dart';
+import 'services/native_bridge.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
@@ -21,15 +22,19 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
   @override
   void initState() {
     super.initState();
+    NativeBridge.onAlarmLaunched = _openRingScreenIfNeeded;
     AlarmTriggerBridge.alarmIdNotifier.addListener(_onAlarmTriggered);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _openRingScreenIfNeeded(widget.initialAlarmId);
-      _openRingScreenIfNeeded(AlarmTriggerBridge.consumePending());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final nativeLaunch = await NativeBridge.instance.getLaunchAlarmId();
+      await _openRingScreenIfNeeded(
+        widget.initialAlarmId ?? nativeLaunch ?? AlarmTriggerBridge.consumePending(),
+      );
     });
   }
 
   @override
   void dispose() {
+    NativeBridge.onAlarmLaunched = null;
     AlarmTriggerBridge.alarmIdNotifier.removeListener(_onAlarmTriggered);
     super.dispose();
   }
@@ -47,8 +52,7 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
 
-    final isAlreadyOpen = navigator.canPop();
-    if (isAlreadyOpen) return;
+    if (navigator.canPop()) return;
 
     await navigator.push(
       MaterialPageRoute(

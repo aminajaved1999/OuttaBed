@@ -1,11 +1,9 @@
 import 'dart:io';
 
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
-
-import '../alarm_callback.dart';
 import '../models/alarm.dart';
 import '../utils/alarm_calculator.dart';
 import 'alarm_storage.dart';
+import 'native_bridge.dart';
 import 'notification_service.dart';
 
 class AlarmScheduler {
@@ -14,7 +12,7 @@ class AlarmScheduler {
 
   Future<void> init() async {
     if (Platform.isAndroid) {
-      await AndroidAlarmManager.initialize();
+      NativeBridge.installHandler();
     }
     await NotificationService.instance.init();
   }
@@ -26,16 +24,14 @@ class AlarmScheduler {
     }
 
     final scheduledAt = nextAlarmDateTime(alarm);
+
     if (Platform.isAndroid) {
-      await AndroidAlarmManager.oneShotAt(
-        scheduledAt,
-        alarmNotificationId(alarm.id),
-        alarmFireCallback,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: true,
-        allowWhileIdle: true,
-        params: {'alarmId': alarm.id},
+      await NativeBridge.instance.scheduleAlarm(
+        alarmId: alarm.id,
+        triggerAt: scheduledAt,
+        label: alarm.label,
+        soundUri: alarm.nativeSoundUri,
+        volume: alarm.volume,
       );
     }
 
@@ -44,7 +40,7 @@ class AlarmScheduler {
 
   Future<void> cancelAlarm(String alarmId) async {
     if (Platform.isAndroid) {
-      await AndroidAlarmManager.cancel(alarmNotificationId(alarmId));
+      await NativeBridge.instance.cancelAlarm(alarmId);
     }
     await NotificationService.instance.cancelIosBackup(alarmId);
     await NotificationService.instance.cancelAlarmNotification(alarmId);
@@ -63,14 +59,12 @@ class AlarmScheduler {
   Future<void> scheduleSnooze(Alarm alarm) async {
     final snoozeTime = DateTime.now().add(Duration(minutes: alarm.snoozeMinutes));
     if (Platform.isAndroid) {
-      await AndroidAlarmManager.oneShotAt(
-        snoozeTime,
-        alarmNotificationId('${alarm.id}_snooze'),
-        alarmFireCallback,
-        exact: true,
-        wakeup: true,
-        allowWhileIdle: true,
-        params: {'alarmId': alarm.id},
+      await NativeBridge.instance.scheduleAlarm(
+        alarmId: alarm.id,
+        triggerAt: snoozeTime,
+        label: alarm.label,
+        soundUri: alarm.nativeSoundUri,
+        volume: alarm.volume,
       );
     }
     await NotificationService.instance.scheduleIosBackup(alarm, snoozeTime);

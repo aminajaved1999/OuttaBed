@@ -1,8 +1,10 @@
 import 'dart:convert';
 
+enum AlarmSoundSource { builtin, device }
+
 enum AlarmSound {
-  classic('classic_alarm', 'Classic Beep', '🔔'),
-  digital('digital_alarm', 'Digital Pulse', '✨');
+  classic('classic_alarm', 'main character beep', '🔔'),
+  digital('digital_alarm', 'chaos pulse', '✨');
 
   const AlarmSound(this.assetName, this.label, this.emoji);
   final String assetName;
@@ -10,6 +12,7 @@ enum AlarmSound {
   final String emoji;
 
   String get assetPath => 'assets/sounds/$assetName.wav';
+  String get nativeKey => 'asset://$assetName';
 }
 
 class Alarm {
@@ -17,12 +20,15 @@ class Alarm {
     required this.id,
     required this.hour,
     required this.minute,
-    this.label = 'Alarm',
+    this.label = 'wake up bestie',
     this.enabled = true,
     this.repeatDays = const {},
     this.volume = 1.0,
     this.snoozeMinutes = 9,
+    this.soundSource = AlarmSoundSource.builtin,
     this.sound = AlarmSound.classic,
+    this.deviceSoundUri,
+    this.deviceSoundTitle,
   });
 
   final String id;
@@ -33,24 +39,37 @@ class Alarm {
   final Set<int> repeatDays;
   final double volume;
   final int snoozeMinutes;
+  final AlarmSoundSource soundSource;
   final AlarmSound sound;
+  final String? deviceSoundUri;
+  final String? deviceSoundTitle;
 
-  static const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  static const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   bool get isRepeating => repeatDays.isNotEmpty;
 
+  String get soundLabel => switch (soundSource) {
+        AlarmSoundSource.builtin => sound.label,
+        AlarmSoundSource.device => deviceSoundTitle ?? 'phone sound',
+      };
+
+  String? get nativeSoundUri => switch (soundSource) {
+        AlarmSoundSource.builtin => sound.nativeKey,
+        AlarmSoundSource.device => deviceSoundUri,
+      };
+
   String get repeatSummary {
-    if (repeatDays.isEmpty) return 'Once';
-    if (repeatDays.length == 7) return 'Every day';
+    if (repeatDays.isEmpty) return 'one time only';
+    if (repeatDays.length == 7) return 'every day fr';
     if (repeatDays.length == 5 &&
         repeatDays.containsAll({1, 2, 3, 4, 5})) {
-      return 'Weekdays';
+      return 'weekday grind';
     }
     if (repeatDays.length == 2 && repeatDays.containsAll({0, 6})) {
-      return 'Weekends';
+      return 'weekend mode';
     }
     final sorted = repeatDays.toList()..sort();
-    return sorted.map((d) => dayLabels[d]).join(', ');
+    return sorted.map((d) => dayLabels[d]).join(' ');
   }
 
   String get timeLabel {
@@ -69,7 +88,11 @@ class Alarm {
     Set<int>? repeatDays,
     double? volume,
     int? snoozeMinutes,
+    AlarmSoundSource? soundSource,
     AlarmSound? sound,
+    String? deviceSoundUri,
+    String? deviceSoundTitle,
+    bool clearDeviceSound = false,
   }) {
     return Alarm(
       id: id ?? this.id,
@@ -80,7 +103,11 @@ class Alarm {
       repeatDays: repeatDays ?? this.repeatDays,
       volume: volume ?? this.volume,
       snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
+      soundSource: soundSource ?? this.soundSource,
       sound: sound ?? this.sound,
+      deviceSoundUri: clearDeviceSound ? null : (deviceSoundUri ?? this.deviceSoundUri),
+      deviceSoundTitle:
+          clearDeviceSound ? null : (deviceSoundTitle ?? this.deviceSoundTitle),
     );
   }
 
@@ -93,7 +120,10 @@ class Alarm {
         'repeatDays': repeatDays.toList(),
         'volume': volume,
         'snoozeMinutes': snoozeMinutes,
+        'soundSource': soundSource.name,
         'sound': sound.name,
+        'deviceSoundUri': deviceSoundUri,
+        'deviceSoundTitle': deviceSoundTitle,
       };
 
   factory Alarm.fromJson(Map<String, dynamic> json) {
@@ -101,17 +131,23 @@ class Alarm {
       id: json['id'] as String,
       hour: json['hour'] as int,
       minute: json['minute'] as int,
-      label: json['label'] as String? ?? 'Alarm',
+      label: json['label'] as String? ?? 'wake up bestie',
       enabled: json['enabled'] as bool? ?? true,
       repeatDays: (json['repeatDays'] as List<dynamic>? ?? [])
           .map((e) => e as int)
           .toSet(),
       volume: (json['volume'] as num?)?.toDouble() ?? 1.0,
       snoozeMinutes: json['snoozeMinutes'] as int? ?? 9,
+      soundSource: AlarmSoundSource.values.firstWhere(
+        (s) => s.name == json['soundSource'],
+        orElse: () => AlarmSoundSource.builtin,
+      ),
       sound: AlarmSound.values.firstWhere(
         (s) => s.name == json['sound'],
         orElse: () => AlarmSound.classic,
       ),
+      deviceSoundUri: json['deviceSoundUri'] as String?,
+      deviceSoundTitle: json['deviceSoundTitle'] as String?,
     );
   }
 

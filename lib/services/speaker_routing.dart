@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 class SpeakerRouting {
   SpeakerRouting._();
 
-  static const _channel = MethodChannel('com.outtabed.outta_bed/speaker');
+  static const _channel = MethodChannel('com.outtabed.outta_bed/native');
 
   static Future<void> routeAlarmToSpeaker() async {
     try {

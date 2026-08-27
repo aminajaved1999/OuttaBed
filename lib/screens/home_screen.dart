@@ -1,37 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../models/alarm.dart';
 import '../services/alarm_scheduler.dart';
 import '../services/alarm_storage.dart';
+import '../services/native_bridge.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cute_widgets.dart';
 import 'alarm_edit_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.previewAlarms});
+  const HomeScreen({super.key, this.previewAlarms, this.previewBudsConnected = false});
 
-  /// When set, skips storage and shows these alarms (for screenshots/dev).
   final List<Alarm>? previewAlarms;
+  final bool previewBudsConnected;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   List<Alarm> _alarms = [];
   bool _loading = true;
+  bool _budsConnected = false;
+  late AnimationController _floatController;
 
   @override
   void initState() {
     super.initState();
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
     if (widget.previewAlarms != null) {
       _alarms = widget.previewAlarms!;
       _loading = false;
+      _budsConnected = widget.previewBudsConnected;
     } else {
       _loadAlarms();
+      _checkBuds();
     }
+  }
+
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _checkBuds() async {
+    final connected = await NativeBridge.instance.isBluetoothAudioConnected();
+    if (mounted) setState(() => _budsConnected = connected);
   }
 
   Future<void> _loadAlarms() async {
@@ -50,6 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleAlarm(Alarm alarm, bool enabled) async {
+    HapticFeedback.selectionClick();
     if (widget.previewAlarms != null) {
       setState(() {
         final i = _alarms.indexWhere((a) => a.id == alarm.id);
@@ -96,11 +118,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openEditor([Alarm? alarm]) async {
     if (widget.previewAlarms != null) return;
+    HapticFeedback.lightImpact();
     final result = await Navigator.of(context).push<Alarm>(
       MaterialPageRoute(builder: (_) => AlarmEditScreen(alarm: alarm)),
     );
     if (result == null) return;
-
     await _upsertAlarm(result);
     if (result.enabled) {
       await AlarmScheduler.instance.scheduleAlarm(result);
@@ -116,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (await Permission.scheduleExactAlarm.isDenied) {
       await Permission.scheduleExactAlarm.request();
     }
+    await NativeBridge.instance.openBatterySettings();
   }
 
   @override
@@ -126,13 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         body: SafeArea(
           child: _loading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.coral),
-                )
+              ? const Center(child: CircularProgressIndicator(color: AppColors.coral))
               : CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(child: _HomeHeader(onSettings: _requestPermissions)),
-                    SliverToBoxAdapter(child: _TipCard()),
+                    SliverToBoxAdapter(child: _BudsStatusCard(connected: _budsConnected)),
                     if (_alarms.isEmpty)
                       SliverFillRemaining(
                         hasScrollBody: false,
@@ -140,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                     else
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
                         sliver: SliverList.separated(
                           itemCount: _alarms.length,
                           separatorBuilder: (_, _) => const SizedBox(height: 14),
@@ -178,7 +199,7 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(24, 20, 16, 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -186,21 +207,21 @@ class _HomeHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('🌙', style: TextStyle(fontSize: 36)),
-                const SizedBox(height: 4),
+                const Text('😮‍💨', style: TextStyle(fontSize: 44)),
                 Text(
-                  'OuttaBed',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  'outtabed',
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: AppColors.plum,
-                        letterSpacing: -0.5,
+                        letterSpacing: -1.5,
                       ),
                 ),
                 Text(
-                  'Sweet dreams, loud mornings ✨',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  'your earbuds can stay connected.\nyour alarm still hits the speaker.',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: AppColors.plumSoft,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
                       ),
                 ),
               ],
@@ -220,32 +241,45 @@ class _HomeHeader extends StatelessWidget {
   }
 }
 
-class _TipCard extends StatelessWidget {
+class _BudsStatusCard extends StatelessWidget {
+  const _BudsStatusCard({required this.connected});
+
+  final bool connected;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
       child: SoftCard(
-        padding: const EdgeInsets.all(18),
-        child: Row(
+        padding: const EdgeInsets.all(20),
+        gradient: connected
+            ? LinearGradient(
+                colors: [
+                  AppColors.violet.withValues(alpha: 0.35),
+                  AppColors.coral.withValues(alpha: 0.25),
+                ],
+              )
+            : null,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.lavender.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(16),
+            Text(
+              connected ? '🎧 buds detected' : '🔊 speaker mode locked in',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppColors.plum,
               ),
-              child: const Text('📱', style: TextStyle(fontSize: 26)),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                'Alarms always play from your phone speaker — earbuds can stay connected!',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.plum,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                    ),
+            const SizedBox(height: 6),
+            Text(
+              connected
+                  ? "don't worry. i've got the morning."
+                  : 'no buds connected rn — still gonna yell through your phone.',
+              style: const TextStyle(
+                color: AppColors.plumSoft,
+                fontWeight: FontWeight.w700,
+                height: 1.3,
               ),
             ),
           ],
@@ -267,30 +301,28 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('😴', style: TextStyle(fontSize: 72)),
-          const SizedBox(height: 20),
+          const Text('💤', style: TextStyle(fontSize: 88)),
+          const SizedBox(height: 16),
           Text(
-            'No alarms yet',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+            'no alarms yet',
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
                   color: AppColors.plum,
                 ),
           ),
           const SizedBox(height: 10),
-          Text(
-            'Set a cozy wake-up time and we\'ll make sure you actually hear it.',
+          const Text(
+            'set one before you doomscroll into sleep.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.plumSoft,
-                  height: 1.4,
-                ),
+            style: TextStyle(
+              color: AppColors.plumSoft,
+              fontWeight: FontWeight.w700,
+              fontSize: 17,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 28),
-          PillButton(
-            label: 'Create alarm',
-            icon: Icons.add_rounded,
-            onPressed: onAdd,
-          ),
+          PillButton(label: 'create alarm', icon: Icons.add_rounded, onPressed: onAdd),
         ],
       ),
     );
@@ -321,10 +353,8 @@ class _AlarmCard extends StatelessWidget {
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 24),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.rose, AppColors.coral],
-          ),
-          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(colors: [AppColors.rose, AppColors.coral]),
+          borderRadius: BorderRadius.circular(32),
         ),
         child: const Icon(Icons.delete_outline_rounded, color: AppColors.white, size: 28),
       ),
@@ -332,12 +362,12 @@ class _AlarmCard extends StatelessWidget {
         return await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                title: const Text('Delete alarm? 🗑️'),
-                content: Text('Remove ${alarm.timeLabel}?'),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                title: const Text('delete this alarm?'),
+                content: Text('${alarm.timeLabel} is gonna vanish'),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Nope')),
-                  FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('nah')),
+                  FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('yeet')),
                 ],
               ),
             ) ??
@@ -346,7 +376,7 @@ class _AlarmCard extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: SoftCard(
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 22),
         child: Row(
           children: [
             Expanded(
@@ -355,31 +385,31 @@ class _AlarmCard extends StatelessWidget {
                 children: [
                   Text(
                     alarm.timeLabel,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                          fontWeight: FontWeight.w300,
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.w200,
                           color: muted
                               ? AppColors.plumSoft.withValues(alpha: 0.5)
                               : AppColors.plum,
-                          letterSpacing: -1,
+                          letterSpacing: -2,
                         ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     alarm.label,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w900,
                           color: muted
                               ? AppColors.plumSoft.withValues(alpha: 0.5)
                               : AppColors.plum,
                         ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 6,
                     children: [
                       _TagChip(text: alarm.repeatSummary, emoji: '🔁'),
-                      _TagChip(text: alarm.sound.label, emoji: alarm.sound.emoji),
+                      _TagChip(text: alarm.soundLabel, emoji: '🎵'),
                     ],
                   ),
                 ],
@@ -395,7 +425,6 @@ class _AlarmCard extends StatelessWidget {
 
 class _TagChip extends StatelessWidget {
   const _TagChip({required this.text, required this.emoji});
-
   final String text;
   final String emoji;
 
@@ -411,7 +440,7 @@ class _TagChip extends StatelessWidget {
         '$emoji $text',
         style: const TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
           color: AppColors.plumSoft,
         ),
       ),
@@ -421,7 +450,6 @@ class _TagChip extends StatelessWidget {
 
 class _CuteFab extends StatelessWidget {
   const _CuteFab({required this.onPressed});
-
   final VoidCallback onPressed;
 
   @override
@@ -430,11 +458,11 @@ class _CuteFab extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(32),
         child: Ink(
           decoration: BoxDecoration(
             gradient: AppGradients.fab,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(32),
             boxShadow: [
               BoxShadow(
                 color: AppColors.coral.withValues(alpha: 0.4),
@@ -444,18 +472,18 @@ class _CuteFab extends StatelessWidget {
             ],
           ),
           child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 18),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.add_rounded, color: AppColors.white, size: 26),
                 SizedBox(width: 10),
                 Text(
-                  'New alarm',
+                  'new alarm',
                   style: TextStyle(
                     color: AppColors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
                   ),
                 ),
               ],

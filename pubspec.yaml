@@ -12,7 +12,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.3
   flutter_local_notifications: ^19.0.0
-  android_alarm_manager_plus: ^4.0.7
   just_audio: ^0.10.4
   audio_session: ^0.2.1
   permission_handler: ^12.0.0+1

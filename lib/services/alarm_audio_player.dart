@@ -30,12 +30,22 @@ class AlarmAudioPlayer {
     ));
 
     await SpeakerRouting.routeAlarmToSpeaker();
-
-    await _player.setAsset(alarm.sound.assetPath);
+    await _setSource(alarm);
     await _player.setLoopMode(LoopMode.one);
     await _player.setVolume(alarm.volume.clamp(0.0, 1.0));
     await _player.play();
     _isPlaying = true;
+  }
+
+  Future<void> _setSource(Alarm alarm) async {
+    if (alarm.soundSource == AlarmSoundSource.device &&
+        alarm.deviceSoundUri != null) {
+      await _player.setAudioSource(
+        AudioSource.uri(Uri.parse(alarm.deviceSoundUri!)),
+      );
+    } else {
+      await _player.setAsset(alarm.sound.assetPath);
+    }
   }
 
   Future<void> stop() async {

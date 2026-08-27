@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/alarm.dart';
 import '../services/alarm_sound_preview.dart';
+import '../services/native_bridge.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cute_widgets.dart';
 
@@ -22,7 +24,12 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
   late Set<int> _repeatDays;
   late double _volume;
   late int _snoozeMinutes;
+  late AlarmSoundSource _soundSource;
   late AlarmSound _sound;
+  String? _deviceUri;
+  String? _deviceTitle;
+  List<DeviceSound> _deviceSounds = [];
+  bool _loadingDeviceSounds = true;
 
   bool get _isEditing => widget.alarm != null;
 
@@ -33,20 +40,36 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     _time = alarm != null
         ? TimeOfDay(hour: alarm.hour, minute: alarm.minute)
         : const TimeOfDay(hour: 5, minute: 0);
-    _labelController = TextEditingController(text: alarm?.label ?? 'Rise & shine');
+    _labelController = TextEditingController(text: alarm?.label ?? 'rise & shine bestie');
     _repeatDays = Set<int>.from(alarm?.repeatDays ?? {1, 2, 3, 4, 5});
     _volume = alarm?.volume ?? 1.0;
     _snoozeMinutes = alarm?.snoozeMinutes ?? 9;
+    _soundSource = alarm?.soundSource ?? AlarmSoundSource.builtin;
     _sound = alarm?.sound ?? AlarmSound.classic;
-    AlarmSoundPreview.instance.previewingSound.addListener(_onPreviewChanged);
+    _deviceUri = alarm?.deviceSoundUri;
+    _deviceTitle = alarm?.deviceSoundTitle;
+    AlarmSoundPreview.instance.previewingKey.addListener(_onPreviewChanged);
+    _loadDeviceSounds();
+  }
+
+  Future<void> _loadDeviceSounds() async {
+    if (widget.previewOnly) {
+      setState(() => _loadingDeviceSounds = false);
+      return;
+    }
+    final sounds = await NativeBridge.instance.getDeviceAlarmSounds();
+    if (mounted) {
+      setState(() {
+        _deviceSounds = sounds;
+        _loadingDeviceSounds = false;
+      });
+    }
   }
 
   @override
   void dispose() {
-    AlarmSoundPreview.instance.previewingSound.removeListener(_onPreviewChanged);
-    if (!widget.previewOnly) {
-      AlarmSoundPreview.instance.stop();
-    }
+    AlarmSoundPreview.instance.previewingKey.removeListener(_onPreviewChanged);
+    if (!widget.previewOnly) AlarmSoundPreview.instance.stop();
     _labelController.dispose();
     super.dispose();
   }
@@ -55,16 +78,38 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _previewSound(AlarmSound sound) async {
-    if (widget.previewOnly) return;
-    await AlarmSoundPreview.instance.togglePreview(sound, volume: _volume);
+  void _selectBuiltin(AlarmSound sound) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _soundSource = AlarmSoundSource.builtin;
+      _sound = sound;
+      _deviceUri = null;
+      _deviceTitle = null;
+    });
+    if (!widget.previewOnly) {
+      AlarmSoundPreview.instance.previewBuiltin(sound, volume: _volume);
+    }
   }
 
-  void _selectSound(AlarmSound sound) {
-    setState(() => _sound = sound);
+  void _selectDevice(DeviceSound sound) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _soundSource = AlarmSoundSource.device;
+      _deviceUri = sound.uri;
+      _deviceTitle = sound.title;
+    });
     if (!widget.previewOnly) {
-      AlarmSoundPreview.instance.play(sound, volume: _volume);
+      AlarmSoundPreview.instance.previewDevice(sound.uri, sound.title, volume: _volume);
     }
+  }
+
+  Future<void> _pickFromPhone() async {
+    if (widget.previewOnly) return;
+    HapticFeedback.lightImpact();
+    final picked = await NativeBridge.instance.pickDeviceAlarmSound();
+    if (picked == null) return;
+    _selectDevice(picked);
+    await _loadDeviceSounds();
   }
 
   Future<void> _pickTime() async {
@@ -88,6 +133,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
   }
 
   void _toggleDay(int day) {
+    HapticFeedback.selectionClick();
     setState(() {
       if (_repeatDays.contains(day)) {
         _repeatDays.remove(day);
@@ -105,13 +151,16 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
       hour: _time.hour,
       minute: _time.minute,
       label: _labelController.text.trim().isEmpty
-          ? 'Alarm'
+          ? 'wake up bestie'
           : _labelController.text.trim(),
       enabled: widget.alarm?.enabled ?? true,
       repeatDays: Set<int>.from(_repeatDays),
       volume: _volume,
       snoozeMinutes: _snoozeMinutes,
+      soundSource: _soundSource,
       sound: _sound,
+      deviceSoundUri: _deviceUri,
+      deviceSoundTitle: _deviceTitle,
     );
     Navigator.of(context).pop(alarm);
   }
@@ -132,15 +181,12 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                     Navigator.pop(context);
                   },
                 ),
-          title: Text(_isEditing ? 'Edit alarm ✏️' : 'New alarm ⏰'),
+          title: Text(_isEditing ? 'tweak alarm ✏️' : 'new alarm ⏰'),
           actions: [
             if (!widget.previewOnly)
               TextButton(
                 onPressed: _save,
-                child: const Text(
-                  'Save',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                ),
+                child: const Text('save', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
               ),
           ],
         ),
@@ -150,7 +196,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             GestureDetector(
               onTap: _pickTime,
               child: SoftCard(
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
                 gradient: LinearGradient(
                   colors: [
                     AppColors.lavender.withValues(alpha: 0.5),
@@ -159,23 +205,19 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                 ),
                 child: Column(
                   children: [
-                    const Text('☀️', style: TextStyle(fontSize: 32)),
-                    const SizedBox(height: 8),
+                    const Text('☀️', style: TextStyle(fontSize: 36)),
                     Text(
                       _formatTime(_time),
                       style: Theme.of(context).textTheme.displayLarge?.copyWith(
                             fontWeight: FontWeight.w200,
                             color: AppColors.plum,
-                            letterSpacing: -2,
+                            fontSize: 64,
+                            letterSpacing: -3,
                           ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Tap to change',
-                      style: TextStyle(
-                        color: AppColors.plumSoft,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    const Text(
+                      'tap to change',
+                      style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
@@ -185,14 +227,14 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             TextField(
               controller: _labelController,
               readOnly: widget.previewOnly,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(fontWeight: FontWeight.w800),
               decoration: const InputDecoration(
-                labelText: 'Alarm name',
+                labelText: 'alarm name',
                 prefixIcon: Icon(Icons.label_outline_rounded),
               ),
             ),
             const SizedBox(height: 28),
-            const SectionTitle(title: 'Repeat days', emoji: '📅'),
+            const SectionTitle(title: 'repeat', emoji: '📅'),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(7, (index) {
@@ -203,34 +245,58 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                 );
               }),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _repeatDays.isEmpty ? 'One-time alarm' : 'Repeating alarm',
-              style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w600),
-            ),
             const SizedBox(height: 28),
-            const SectionTitle(title: 'Sound', emoji: '🎵'),
-            Text(
-              'Tap a sound to select & preview · use ▶ to replay',
-              style: TextStyle(
-                color: AppColors.plumSoft,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+            const SectionTitle(title: 'vibes (sound)', emoji: '🎵'),
+            const Text(
+              'tap to preview — pick what actually wakes you up',
+              style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             ...AlarmSound.values.map(
               (sound) => SoundOptionCard(
                 emoji: sound.emoji,
                 label: sound.label,
-                selected: _sound == sound,
-                isPlaying: AlarmSoundPreview.instance.isPreviewing(sound),
-                onTap: () => _selectSound(sound),
-                onPreview: widget.previewOnly ? null : () => _previewSound(sound),
+                selected: _soundSource == AlarmSoundSource.builtin && _sound == sound,
+                isPlaying: AlarmSoundPreview.instance.isPreviewingKey(sound.name),
+                onTap: () => _selectBuiltin(sound),
+                onPreview: widget.previewOnly
+                    ? null
+                    : () => AlarmSoundPreview.instance.toggleBuiltin(sound, volume: _volume),
               ),
             ),
+            const SizedBox(height: 16),
+            const SectionTitle(title: 'phone sounds', emoji: '📱'),
+            if (_loadingDeviceSounds)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator(color: AppColors.coral)),
+              )
+            else ...[
+              ..._deviceSounds.take(8).map(
+                (sound) => SoundOptionCard(
+                  emoji: '📳',
+                  label: sound.title,
+                  selected: _soundSource == AlarmSoundSource.device && _deviceUri == sound.uri,
+                  isPlaying: AlarmSoundPreview.instance.isPreviewingKey(sound.uri),
+                  onTap: () => _selectDevice(sound),
+                  onPreview: widget.previewOnly
+                      ? null
+                      : () => AlarmSoundPreview.instance.toggleDevice(sound.uri, volume: _volume),
+                ),
+              ),
+              if (!widget.previewOnly)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: PillButton(
+                    label: 'browse all phone sounds',
+                    icon: Icons.library_music_rounded,
+                    filled: false,
+                    onPressed: _pickFromPhone,
+                  ),
+                ),
+            ],
             const SizedBox(height: 20),
-            const SectionTitle(title: 'Volume', emoji: '🔊'),
+            const SectionTitle(title: 'loudness', emoji: '🔊'),
             SoftCard(
               padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
               child: Row(
@@ -251,19 +317,8 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text(
-                '${(_volume * 100).round()}% loud',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.plumSoft,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
             const SizedBox(height: 24),
-            const SectionTitle(title: 'Snooze', emoji: '💤'),
+            const SectionTitle(title: 'snooze', emoji: '💤'),
             Row(
               children: [5, 9, 15].map((mins) {
                 final selected = _snoozeMinutes == mins;
@@ -271,14 +326,17 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                   child: Padding(
                     padding: EdgeInsets.only(right: mins != 15 ? 8 : 0),
                     child: GestureDetector(
-                      onTap: () => setState(() => _snoozeMinutes = mins),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _snoozeMinutes = mins);
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
                           gradient: selected ? AppGradients.cardAccent : null,
                           color: selected ? null : AppColors.white,
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(22),
                           border: Border.all(
                             color: selected ? Colors.transparent : AppColors.blush,
                             width: 2,
@@ -288,7 +346,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                           '$mins min',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w900,
                             color: selected ? AppColors.white : AppColors.plumSoft,
                           ),
                         ),
@@ -303,7 +361,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
               SizedBox(
                 width: double.infinity,
                 child: PillButton(
-                  label: _isEditing ? 'Save changes' : 'Create alarm',
+                  label: _isEditing ? 'save changes' : 'lock it in',
                   icon: Icons.check_rounded,
                   onPressed: _save,
                 ),

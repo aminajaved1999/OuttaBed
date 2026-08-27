@@ -27,7 +27,7 @@ void main() {
 
   testWidgets('home with alarms', (tester) async {
     await tester.binding.setSurfaceSize(phoneSize);
-    await tester.pumpWidget(wrap(HomeScreen(previewAlarms: SampleAlarms.list)));
+    await tester.pumpWidget(wrap(HomeScreen(previewAlarms: SampleAlarms.list, previewBudsConnected: true)));
     await expectLater(
       find.byKey(const ValueKey('screenshot')),
       matchesGoldenFile('../screenshots/01_home.png'),

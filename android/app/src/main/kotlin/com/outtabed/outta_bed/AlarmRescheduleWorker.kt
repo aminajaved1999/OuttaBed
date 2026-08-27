@@ -24,6 +24,23 @@ object AlarmRescheduleWorker {
         }
     }
 
+    fun rescheduleAlarmById(context: Context, alarmId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val raw = prefs.getString(ALARMS_KEY, null) ?: return
+        try {
+            val alarms = JSONArray(raw)
+            for (i in 0 until alarms.length()) {
+                val alarm = alarms.getJSONObject(i)
+                if (alarm.getString("id") != alarmId) continue
+                if (!alarm.optBoolean("enabled", true)) return
+                scheduleIfFuture(context, alarm)
+                return
+            }
+        } catch (_: Exception) {
+            // Flutter will reschedule when app opens.
+        }
+    }
+
     private fun scheduleIfFuture(context: Context, alarm: JSONObject) {
         val id = alarm.getString("id")
         val hour = alarm.getInt("hour")

@@ -116,4 +116,62 @@ class NativeBridge {
     if (!Platform.isAndroid) return;
     await _channel.invokeMethod<void>('openBatterySettings');
   }
+
+  Future<bool> canScheduleExactAlarms() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('canScheduleExactAlarms');
+    return result ?? true;
+  }
+
+  Future<bool> requestExactAlarms() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('requestExactAlarms');
+    return result ?? false;
+  }
+
+  Future<void> openExactAlarmSettings() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('openExactAlarmSettings');
+  }
+
+  Future<bool> areNotificationsEnabled() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('areNotificationsEnabled');
+    return result ?? true;
+  }
+
+  Future<bool> requestNotifications() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('requestNotifications');
+    return result ?? false;
+  }
+
+  Future<bool> canUseFullScreenIntent() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('canUseFullScreenIntent');
+    return result ?? true;
+  }
+
+  Future<bool> requestFullScreenIntent() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('requestFullScreenIntent');
+    return result ?? false;
+  }
+
+  Future<void> openFullScreenIntentSettings() async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('openFullScreenIntentSettings');
+  }
+
+  Future<bool> isIgnoringBatteryOptimizations() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('isIgnoringBatteryOptimizations');
+    return result ?? true;
+  }
+
+  Future<bool> requestIgnoreBatteryOptimizations() async {
+    if (!Platform.isAndroid) return true;
+    final result = await _channel.invokeMethod<bool>('requestIgnoreBatteryOptimizations');
+    return result ?? false;
+  }
 }

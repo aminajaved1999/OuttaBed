@@ -18,6 +18,7 @@ class OuttaBedApp extends StatefulWidget {
 
 class _OuttaBedAppState extends State<OuttaBedApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  bool _ringScreenOpen = false;
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
   }
 
   Future<void> _openRingScreenIfNeeded(String? alarmId) async {
-    if (alarmId == null || alarmId.isEmpty) return;
+    if (alarmId == null || alarmId.isEmpty || _ringScreenOpen) return;
 
     final alarm = await AlarmStorage.instance.getAlarm(alarmId);
     if (alarm == null) return;
@@ -52,14 +53,15 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
 
-    if (navigator.canPop()) return;
-
+    _ringScreenOpen = true;
+    await AlarmStorage.instance.setRingingAlarmId(alarmId);
     await navigator.push(
       MaterialPageRoute(
         fullscreenDialog: true,
         builder: (_) => AlarmRingScreen(alarm: alarm),
       ),
     );
+    _ringScreenOpen = false;
   }
 
   @override

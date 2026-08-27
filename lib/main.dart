@@ -12,7 +12,6 @@ Future<void> main() async {
   NativeBridge.installHandler();
   await AlarmStorage.instance.init();
   await AlarmScheduler.instance.init();
-  await NotificationService.instance.requestPermissions();
   await AlarmScheduler.instance.rescheduleAll();
 
   final nativeLaunch = await NativeBridge.instance.getLaunchAlarmId();

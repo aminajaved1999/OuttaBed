@@ -1,17 +1,23 @@
 package com.outtabed.outta_bed
 
 import android.app.Activity
+import android.app.AlarmManager
+import android.app.NotificationManager
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -136,8 +142,40 @@ class MainActivity : FlutterFragmentActivity() {
                         result.success(null)
                     }
                     "openBatterySettings" -> {
-                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        requestIgnoreBatteryOptimizations()
                         result.success(null)
+                    }
+                    "canScheduleExactAlarms" -> {
+                        result.success(canScheduleExactAlarms())
+                    }
+                    "requestExactAlarms" -> {
+                        result.success(requestExactAlarms())
+                    }
+                    "openExactAlarmSettings" -> {
+                        openExactAlarmSettings()
+                        result.success(null)
+                    }
+                    "areNotificationsEnabled" -> {
+                        result.success(areNotificationsEnabled())
+                    }
+                    "requestNotifications" -> {
+                        result.success(requestNotifications())
+                    }
+                    "canUseFullScreenIntent" -> {
+                        result.success(canUseFullScreenIntent())
+                    }
+                    "requestFullScreenIntent" -> {
+                        result.success(requestFullScreenIntent())
+                    }
+                    "openFullScreenIntentSettings" -> {
+                        openFullScreenIntentSettings()
+                        result.success(null)
+                    }
+                    "isIgnoringBatteryOptimizations" -> {
+                        result.success(isIgnoringBatteryOptimizations())
+                    }
+                    "requestIgnoreBatteryOptimizations" -> {
+                        result.success(requestIgnoreBatteryOptimizations())
                     }
                     else -> result.notImplemented()
                 }
@@ -194,5 +232,79 @@ class MainActivity : FlutterFragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             audioManager.clearCommunicationDevice()
         }
+    }
+
+    private fun canScheduleExactAlarms(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        return alarmManager.canScheduleExactAlarms()
+    }
+
+    private fun requestExactAlarms(): Boolean {
+        if (canScheduleExactAlarms()) return true
+        openExactAlarmSettings()
+        return false
+    }
+
+    private fun openExactAlarmSettings() {
+        val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        startActivity(intent)
+    }
+
+    private fun areNotificationsEnabled(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotifications(): Boolean {
+        if (areNotificationsEnabled()) return true
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                1001,
+            )
+        }
+        return areNotificationsEnabled()
+    }
+
+    private fun canUseFullScreenIntent(): Boolean {
+        if (Build.VERSION.SDK_INT < 34) return true
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return manager.canUseFullScreenIntent()
+    }
+
+    private fun requestFullScreenIntent(): Boolean {
+        if (canUseFullScreenIntent()) return true
+        openFullScreenIntentSettings()
+        return false
+    }
+
+    private fun openFullScreenIntentSettings() {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                data = Uri.parse("package:$packageName")
+            }
+            startActivity(intent)
+        }
+    }
+
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        val manager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        return manager.isIgnoringBatteryOptimizations(packageName)
+    }
+
+    private fun requestIgnoreBatteryOptimizations(): Boolean {
+        if (isIgnoringBatteryOptimizations()) return true
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+            data = Uri.parse("package:$packageName")
+        }
+        startActivity(intent)
+        return false
     }
 }

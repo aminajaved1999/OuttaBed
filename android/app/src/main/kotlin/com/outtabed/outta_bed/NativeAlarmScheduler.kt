@@ -40,12 +40,17 @@ object NativeAlarmScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val info = AlarmManager.AlarmClockInfo(triggerAtMillis, showIntent)
+        val safeTriggerAt = maxOf(triggerAtMillis, System.currentTimeMillis() + 2_000L)
+        val info = AlarmManager.AlarmClockInfo(safeTriggerAt, showIntent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarmManager.canScheduleExactAlarms()) {
                 alarmManager.setAlarmClock(info, pending)
             } else {
-                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pending)
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    safeTriggerAt,
+                    pending,
+                )
             }
         } else {
             alarmManager.setAlarmClock(info, pending)

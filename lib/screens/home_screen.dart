@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../models/alarm.dart';
 import '../services/alarm_scheduler.dart';
+import '../services/permission_service.dart';
 import '../services/alarm_storage.dart';
 import '../services/native_bridge.dart';
-import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cute_widgets.dart';
 import 'alarm_edit_screen.dart';
@@ -21,7 +20,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   List<Alarm> _alarms = [];
   bool _loading = true;
   bool _budsConnected = false;
@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _floatController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -41,13 +42,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     } else {
       _loadAlarms();
       _checkBuds();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        PermissionService.instance.ensureAlarmPermissions(context);
+      });
     }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _floatController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && widget.previewAlarms == null) {
+      AlarmScheduler.instance.rescheduleAll();
+    }
   }
 
   Future<void> _checkBuds() async {
@@ -133,12 +146,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _requestPermissions() async {
     if (widget.previewAlarms != null) return;
-    await NotificationService.instance.requestPermissions();
-    await Permission.notification.request();
-    if (await Permission.scheduleExactAlarm.isDenied) {
-      await Permission.scheduleExactAlarm.request();
-    }
-    await NativeBridge.instance.openBatterySettings();
+    await PermissionService.instance.ensureAlarmPermissions(context);
   }
 
   @override
@@ -443,8 +451,8 @@ class _CuteFab extends StatelessWidget {
                 const Icon(Icons.add_rounded, color: AppColors.voidBlack, size: 26),
                 const SizedBox(width: 10),
                 Text(
-                  '+ alarm',
-                  style: AppTheme.display(18, weight: FontWeight.w800)
+                  'new alarm',
+                  style: AppTheme.display(18, weight: FontWeight.w700)
                       .copyWith(color: AppColors.voidBlack),
                 ),
               ],

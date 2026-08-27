@@ -83,6 +83,7 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
         onPassed: () async {
           Navigator.of(context).pop();
           await _stopRinging();
+          await AlarmScheduler.instance.scheduleAlarm(widget.alarm);
           if (!mounted) return;
           Navigator.of(context).pop();
         },

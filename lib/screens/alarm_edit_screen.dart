@@ -23,6 +23,8 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
   late TimeOfDay _time;
   late TextEditingController _labelController;
   late Set<int> _repeatDays;
+  late AlarmScheduleMode _scheduleMode;
+  late DateTime? _onceDate;
   late double _volume;
   late int _snoozeMinutes;
   late AlarmSoundSource _soundSource;
@@ -43,6 +45,8 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
         : const TimeOfDay(hour: 5, minute: 0);
     _labelController = TextEditingController(text: alarm?.label ?? 'rise & shine bestie');
     _repeatDays = Set<int>.from(alarm?.repeatDays ?? {1, 2, 3, 4, 5});
+    _scheduleMode = alarm?.scheduleMode ?? AlarmScheduleMode.weekly;
+    _onceDate = alarm?.onceDate ?? _defaultOnceDate();
     _volume = alarm?.volume ?? 1.0;
     _snoozeMinutes = alarm?.snoozeMinutes ?? 9;
     _soundSource = alarm?.soundSource ?? AlarmSoundSource.builtin;
@@ -113,6 +117,63 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     await _loadDeviceSounds();
   }
 
+  DateTime _defaultOnceDate() {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    return DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+  }
+
+  String _formatOnceDate(DateTime date) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    final weekday = weekdays[date.weekday - 1];
+    return '$weekday, ${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  Future<void> _pickOnceDate() async {
+    if (widget.previewOnly) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _onceDate ?? _defaultOnceDate(),
+      firstDate: today,
+      lastDate: today.add(const Duration(days: 365 * 2)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.lime,
+              onPrimary: AppColors.voidBlack,
+              surface: AppColors.surface,
+              onSurface: AppColors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _onceDate = DateTime(picked.year, picked.month, picked.day));
+    }
+  }
+
+  void _setScheduleMode(AlarmScheduleMode mode) {
+    if (widget.previewOnly || _scheduleMode == mode) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _scheduleMode = mode;
+      if (mode == AlarmScheduleMode.once) {
+        _onceDate ??= _defaultOnceDate();
+      }
+      if (mode == AlarmScheduleMode.weekly && _repeatDays.isEmpty) {
+        _repeatDays = {1, 2, 3, 4, 5};
+      }
+    });
+  }
+
   void _toggleDay(int day) {
     HapticFeedback.selectionClick();
     setState(() {
@@ -135,7 +196,11 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
           ? 'wake up bestie'
           : _labelController.text.trim(),
       enabled: widget.alarm?.enabled ?? true,
-      repeatDays: Set<int>.from(_repeatDays),
+      repeatDays: _scheduleMode == AlarmScheduleMode.weekly
+          ? Set<int>.from(_repeatDays)
+          : {},
+      scheduleMode: _scheduleMode,
+      onceDate: _scheduleMode == AlarmScheduleMode.once ? _onceDate : null,
       volume: _volume,
       snoozeMinutes: _snoozeMinutes,
       soundSource: _soundSource,
@@ -201,15 +266,70 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             const SizedBox(height: 28),
             const SectionTitle(title: 'repeat', emoji: '📅'),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(7, (index) {
-                return DayChip(
-                  label: Alarm.dayLabels[index],
-                  selected: _repeatDays.contains(index),
-                  onTap: () => _toggleDay(index),
-                );
-              }),
+              children: [
+                Expanded(
+                  child: _ScheduleModeChip(
+                    label: 'weekly',
+                    selected: _scheduleMode == AlarmScheduleMode.weekly,
+                    onTap: () => _setScheduleMode(AlarmScheduleMode.weekly),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _ScheduleModeChip(
+                    label: 'pick date',
+                    selected: _scheduleMode == AlarmScheduleMode.once,
+                    onTap: () => _setScheduleMode(AlarmScheduleMode.once),
+                  ),
+                ),
+              ],
             ),
+            const SizedBox(height: 14),
+            if (_scheduleMode == AlarmScheduleMode.weekly)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(7, (index) {
+                  return DayChip(
+                    label: Alarm.dayLabels[index],
+                    selected: _repeatDays.contains(index),
+                    onTap: () => _toggleDay(index),
+                  );
+                }),
+              )
+            else
+              GestureDetector(
+                onTap: _pickOnceDate,
+                child: SoftCard(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  accent: AppColors.lime,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_today_rounded, color: AppColors.lime, size: 22),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'rings once on',
+                              style: AppTheme.body(12, weight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _onceDate != null
+                                  ? _formatOnceDate(_onceDate!)
+                                  : 'tap to pick date',
+                              style: AppTheme.body(16, weight: FontWeight.w600)
+                                  .copyWith(color: AppColors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded, color: AppColors.muted),
+                    ],
+                  ),
+                ),
+              ),
             const SizedBox(height: 28),
             const SectionTitle(title: 'vibes (sound)', emoji: '🎵'),
             Text(
@@ -337,6 +457,45 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleModeChip extends StatelessWidget {
+  const _ScheduleModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          gradient: selected ? AppGradients.cardAccent : null,
+          color: selected ? null : AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: selected ? AppColors.lime : AppColors.stroke,
+            width: 2,
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTheme.body(15, weight: FontWeight.w600).copyWith(
+            color: selected ? AppColors.voidBlack : AppColors.muted,
+          ),
         ),
       ),
     );

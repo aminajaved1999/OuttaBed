@@ -2,6 +2,8 @@ import 'dart:convert';
 
 enum AlarmSoundSource { builtin, device }
 
+enum AlarmScheduleMode { weekly, once }
+
 enum AlarmSound {
   classic('classic_alarm', 'main character beep', '🔔'),
   digital('digital_alarm', 'chaos pulse', '✨');
@@ -23,6 +25,8 @@ class Alarm {
     this.label = 'wake up bestie',
     this.enabled = true,
     this.repeatDays = const {},
+    this.scheduleMode = AlarmScheduleMode.weekly,
+    this.onceDate,
     this.volume = 1.0,
     this.snoozeMinutes = 9,
     this.soundSource = AlarmSoundSource.builtin,
@@ -37,6 +41,8 @@ class Alarm {
   final String label;
   final bool enabled;
   final Set<int> repeatDays;
+  final AlarmScheduleMode scheduleMode;
+  final DateTime? onceDate;
   final double volume;
   final int snoozeMinutes;
   final AlarmSoundSource soundSource;
@@ -46,7 +52,11 @@ class Alarm {
 
   static const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-  bool get isRepeating => repeatDays.isNotEmpty;
+  bool get isRepeating =>
+      scheduleMode == AlarmScheduleMode.weekly && repeatDays.isNotEmpty;
+
+  bool get isOnceOnDate =>
+      scheduleMode == AlarmScheduleMode.once && onceDate != null;
 
   String get soundLabel => switch (soundSource) {
         AlarmSoundSource.builtin => sound.label,
@@ -59,7 +69,16 @@ class Alarm {
       };
 
   String get repeatSummary {
-    if (repeatDays.isEmpty) return 'one time only';
+    if (scheduleMode == AlarmScheduleMode.once) {
+      if (onceDate == null) return 'pick a date';
+      final d = onceDate!;
+      const months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      ];
+      return '${months[d.month - 1]} ${d.day}, ${d.year}';
+    }
+    if (repeatDays.isEmpty) return 'no days picked';
     if (repeatDays.length == 7) return 'every day fr';
     if (repeatDays.length == 5 &&
         repeatDays.containsAll({1, 2, 3, 4, 5})) {
@@ -86,6 +105,9 @@ class Alarm {
     String? label,
     bool? enabled,
     Set<int>? repeatDays,
+    AlarmScheduleMode? scheduleMode,
+    DateTime? onceDate,
+    bool clearOnceDate = false,
     double? volume,
     int? snoozeMinutes,
     AlarmSoundSource? soundSource,
@@ -101,6 +123,8 @@ class Alarm {
       label: label ?? this.label,
       enabled: enabled ?? this.enabled,
       repeatDays: repeatDays ?? this.repeatDays,
+      scheduleMode: scheduleMode ?? this.scheduleMode,
+      onceDate: clearOnceDate ? null : (onceDate ?? this.onceDate),
       volume: volume ?? this.volume,
       snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
       soundSource: soundSource ?? this.soundSource,
@@ -118,6 +142,11 @@ class Alarm {
         'label': label,
         'enabled': enabled,
         'repeatDays': repeatDays.toList(),
+        'scheduleMode': scheduleMode.name,
+        if (onceDate != null)
+          'onceDate': '${onceDate!.year.toString().padLeft(4, '0')}-'
+              '${onceDate!.month.toString().padLeft(2, '0')}-'
+              '${onceDate!.day.toString().padLeft(2, '0')}',
         'volume': volume,
         'snoozeMinutes': snoozeMinutes,
         'soundSource': soundSource.name,
@@ -136,6 +165,11 @@ class Alarm {
       repeatDays: (json['repeatDays'] as List<dynamic>? ?? [])
           .map((e) => e as int)
           .toSet(),
+      scheduleMode: AlarmScheduleMode.values.firstWhere(
+        (m) => m.name == json['scheduleMode'],
+        orElse: () => AlarmScheduleMode.weekly,
+      ),
+      onceDate: _parseOnceDate(json['onceDate'] as String?),
       volume: (json['volume'] as num?)?.toDouble() ?? 1.0,
       snoozeMinutes: json['snoozeMinutes'] as int? ?? 9,
       soundSource: AlarmSoundSource.values.firstWhere(
@@ -149,6 +183,17 @@ class Alarm {
       deviceSoundUri: json['deviceSoundUri'] as String?,
       deviceSoundTitle: json['deviceSoundTitle'] as String?,
     );
+  }
+
+  static DateTime? _parseOnceDate(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split('-');
+    if (parts.length != 3) return null;
+    final year = int.tryParse(parts[0]);
+    final month = int.tryParse(parts[1]);
+    final day = int.tryParse(parts[2]);
+    if (year == null || month == null || day == null) return null;
+    return DateTime(year, month, day);
   }
 
   static String encodeList(List<Alarm> alarms) =>

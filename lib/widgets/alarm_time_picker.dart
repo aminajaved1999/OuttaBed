@@ -21,13 +21,6 @@ class AlarmTimePicker extends StatefulWidget {
 }
 
 class _AlarmTimePickerState extends State<AlarmTimePicker> {
-  static const _itemHeight = 44.0;
-  static const _visibleItems = 5;
-  static const _wheelHeight = _itemHeight * _visibleItems;
-
-  late FixedExtentScrollController _hourController;
-  late FixedExtentScrollController _minuteController;
-
   late int _hour12;
   late int _minute;
   late bool _isPm;
@@ -36,25 +29,14 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
   void initState() {
     super.initState();
     _syncFromTime(widget.time);
-    _hourController = FixedExtentScrollController(initialItem: _hour12 - 1);
-    _minuteController = FixedExtentScrollController(initialItem: _minute);
   }
 
   @override
   void didUpdateWidget(covariant AlarmTimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.time != widget.time) {
-      _syncFromTime(widget.time);
-      _hourController.jumpToItem(_hour12 - 1);
-      _minuteController.jumpToItem(_minute);
+      setState(() => _syncFromTime(widget.time));
     }
-  }
-
-  @override
-  void dispose() {
-    _hourController.dispose();
-    _minuteController.dispose();
-    super.dispose();
   }
 
   void _syncFromTime(TimeOfDay time) {
@@ -69,6 +51,24 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     widget.onChanged(TimeOfDay(hour: hour24, minute: _minute));
   }
 
+  void _bumpHour(int delta) {
+    if (widget.readOnly) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _hour12 = (_hour12 + delta - 1) % 12 + 1;
+    });
+    _emitChange();
+  }
+
+  void _bumpMinute(int delta) {
+    if (widget.readOnly) return;
+    HapticFeedback.selectionClick();
+    setState(() {
+      _minute = (_minute + delta + 60) % 60;
+    });
+    _emitChange();
+  }
+
   void _setPeriod(bool isPm) {
     if (widget.readOnly || _isPm == isPm) return;
     HapticFeedback.selectionClick();
@@ -76,91 +76,64 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     _emitChange();
   }
 
+  String get _displayTime {
+    final h = _hour12.toString().padLeft(2, '0');
+    final m = _minute.toString().padLeft(2, '0');
+    final p = _isPm ? 'PM' : 'AM';
+    return '$h:$m $p';
+  }
+
   @override
   Widget build(BuildContext context) {
     return SoftCard(
-      padding: const EdgeInsets.fromLTRB(12, 20, 12, 16),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
       accent: AppColors.lime,
       child: Column(
         children: [
+          Text('set time', style: AppTheme.body(14, weight: FontWeight.w500)),
+          const SizedBox(height: 16),
           Text(
-            'set time',
-            style: AppTheme.body(14, weight: FontWeight.w500),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(width: 72, child: Center(child: Text('hour', style: AppTheme.body(12)))),
-              const SizedBox(width: 22),
-              SizedBox(width: 72, child: Center(child: Text('min', style: AppTheme.body(12)))),
-              const SizedBox(width: 64),
-            ],
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            height: _wheelHeight,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: Center(
-                    child: Container(
-                      height: _itemHeight,
-                      margin: const EdgeInsets.symmetric(horizontal: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.lime.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.lime.withValues(alpha: 0.35)),
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _WheelColumn(
-                      controller: _hourController,
-                      itemCount: 12,
-                      readOnly: widget.readOnly,
-                      formatter: (index) => '${index + 1}'.padLeft(2, '0'),
-                      onSelected: (index) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _hour12 = index + 1);
-                        _emitChange();
-                      },
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      child: Text(
-                        ':',
-                        style: AppTheme.display(36, weight: FontWeight.w600).copyWith(
-                          color: AppColors.white,
-                          height: 1,
-                        ),
-                      ),
-                    ),
-                    _WheelColumn(
-                      controller: _minuteController,
-                      itemCount: 60,
-                      readOnly: widget.readOnly,
-                      formatter: (index) => index.toString().padLeft(2, '0'),
-                      onSelected: (index) {
-                        HapticFeedback.selectionClick();
-                        setState(() => _minute = index);
-                        _emitChange();
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    _PeriodPicker(
-                      isPm: _isPm,
-                      readOnly: widget.readOnly,
-                      onChanged: _setPeriod,
-                    ),
-                  ],
-                ),
-              ],
+            _displayTime,
+            style: AppTheme.display(44, weight: FontWeight.w700).copyWith(
+              color: AppColors.lime,
+              letterSpacing: 1,
             ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _StepperColumn(
+                  label: 'hour',
+                  value: _hour12.toString().padLeft(2, '0'),
+                  readOnly: widget.readOnly,
+                  onDecrement: () => _bumpHour(-1),
+                  onIncrement: () => _bumpHour(1),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  ':',
+                  style: AppTheme.display(32, weight: FontWeight.w600).copyWith(color: AppColors.white),
+                ),
+              ),
+              Expanded(
+                child: _StepperColumn(
+                  label: 'min',
+                  value: _minute.toString().padLeft(2, '0'),
+                  readOnly: widget.readOnly,
+                  onDecrement: () => _bumpMinute(-1),
+                  onIncrement: () => _bumpMinute(1),
+                ),
+              ),
+              const SizedBox(width: 12),
+              _PeriodPicker(
+                isPm: _isPm,
+                readOnly: widget.readOnly,
+                onChanged: _setPeriod,
+              ),
+            ],
           ),
         ],
       ),
@@ -168,53 +141,63 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
   }
 }
 
-class _WheelColumn extends StatelessWidget {
-  const _WheelColumn({
-    required this.controller,
-    required this.itemCount,
-    required this.formatter,
-    required this.onSelected,
+class _StepperColumn extends StatelessWidget {
+  const _StepperColumn({
+    required this.label,
+    required this.value,
+    required this.onDecrement,
+    required this.onIncrement,
     required this.readOnly,
   });
 
-  final FixedExtentScrollController controller;
-  final int itemCount;
-  final String Function(int index) formatter;
-  final ValueChanged<int> onSelected;
+  final String label;
+  final String value;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
   final bool readOnly;
-
-  static const _itemHeight = _AlarmTimePickerState._itemHeight;
-  static const _wheelHeight = _AlarmTimePickerState._wheelHeight;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      height: _wheelHeight,
-      child: ListWheelScrollView.useDelegate(
-        controller: controller,
-        physics: readOnly ? const NeverScrollableScrollPhysics() : const FixedExtentScrollPhysics(),
-        itemExtent: _itemHeight,
-        perspective: 0.003,
-        diameterRatio: 1.4,
-        onSelectedItemChanged: readOnly ? null : onSelected,
-        childDelegate: ListWheelChildBuilderDelegate(
-          childCount: itemCount,
-          builder: (context, index) {
-            final selected = controller.hasClients && controller.selectedItem == index;
-            return Center(
-              child: Text(
-                formatter(index),
-                style: AppTheme.display(
-                  selected ? 30 : 20,
-                  weight: selected ? FontWeight.w700 : FontWeight.w400,
-                ).copyWith(
-                  color: selected ? AppColors.lime : AppColors.muted,
-                  height: 1,
-                ),
-              ),
-            );
-          },
+    return Column(
+      children: [
+        Text(label, style: AppTheme.body(12, weight: FontWeight.w500)),
+        const SizedBox(height: 8),
+        _StepperButton(icon: Icons.remove_rounded, onTap: readOnly ? null : onDecrement),
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: AppTheme.display(32, weight: FontWeight.w700).copyWith(color: AppColors.white),
+        ),
+        const SizedBox(height: 6),
+        _StepperButton(icon: Icons.add_rounded, onTap: readOnly ? null : onIncrement),
+      ],
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: 52,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.stroke),
+          ),
+          child: Icon(icon, color: onTap == null ? AppColors.muted : AppColors.lime, size: 26),
         ),
       ),
     );
@@ -235,19 +218,11 @@ class _PeriodPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _PeriodButton(
-          label: 'AM',
-          selected: !isPm,
-          onTap: readOnly ? null : () => onChanged(false),
-        ),
+        const SizedBox(height: 20),
+        _PeriodButton(label: 'AM', selected: !isPm, onTap: readOnly ? null : () => onChanged(false)),
         const SizedBox(height: 8),
-        _PeriodButton(
-          label: 'PM',
-          selected: isPm,
-          onTap: readOnly ? null : () => onChanged(true),
-        ),
+        _PeriodButton(label: 'PM', selected: isPm, onTap: readOnly ? null : () => onChanged(true)),
       ],
     );
   }

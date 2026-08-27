@@ -69,4 +69,18 @@ class AlarmScheduler {
     }
     await NotificationService.instance.scheduleIosBackup(alarm, snoozeTime);
   }
+
+  Future<void> onAlarmDismissed(Alarm alarm) async {
+    if (alarm.scheduleMode == AlarmScheduleMode.once) {
+      await cancelAlarm(alarm.id);
+      final alarms = await AlarmStorage.instance.loadAlarms();
+      final index = alarms.indexWhere((a) => a.id == alarm.id);
+      if (index >= 0) {
+        alarms[index] = alarm.copyWith(enabled: false);
+        await AlarmStorage.instance.saveAlarms(alarms);
+      }
+      return;
+    }
+    await scheduleAlarm(alarm);
+  }
 }

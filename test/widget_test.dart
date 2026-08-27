@@ -21,9 +21,23 @@ void main() {
       hour: 7,
       minute: 0,
       repeatDays: {},
+      scheduleMode: AlarmScheduleMode.weekly,
     );
     final from = DateTime(2026, 1, 1, 8);
     final next = nextAlarmDateTime(alarm, from: from);
     expect(next, DateTime(2026, 1, 2, 7));
+  });
+
+  test('next alarm uses specific date when once mode', () {
+    final alarm = Alarm(
+      id: '1',
+      hour: 8,
+      minute: 30,
+      scheduleMode: AlarmScheduleMode.once,
+      onceDate: DateTime(2026, 3, 15),
+    );
+    final from = DateTime(2026, 1, 1, 10);
+    final next = nextAlarmDateTime(alarm, from: from);
+    expect(next, DateTime(2026, 3, 15, 8, 30));
   });
 }

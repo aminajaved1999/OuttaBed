@@ -55,8 +55,10 @@ object AlarmRescheduleWorker {
             "asset://${soundName}_alarm"
         }
         val repeatDays = alarm.optJSONArray("repeatDays")
+        val scheduleMode = alarm.optString("scheduleMode", "weekly")
+        val onceDate = alarm.optString("onceDate", null)?.takeIf { it.isNotBlank() }
 
-        val triggerAt = nextTriggerMillis(hour, minute, repeatDays) ?: return
+        val triggerAt = nextTriggerMillis(hour, minute, repeatDays, scheduleMode, onceDate) ?: return
         NativeAlarmScheduler.schedule(
             context = context,
             requestCode = id.hashCode() and 0x7fffffff,
@@ -68,9 +70,33 @@ object AlarmRescheduleWorker {
         )
     }
 
-    private fun nextTriggerMillis(hour: Int, minute: Int, repeatDays: JSONArray?): Long? {
+    private fun nextTriggerMillis(
+        hour: Int,
+        minute: Int,
+        repeatDays: JSONArray?,
+        scheduleMode: String,
+        onceDate: String?,
+    ): Long? {
         val now = Calendar.getInstance()
         val candidates = mutableListOf<Calendar>()
+
+        if (scheduleMode == "once" && !onceDate.isNullOrBlank()) {
+            val parts = onceDate.split("-")
+            if (parts.size != 3) return null
+            val year = parts[0].toIntOrNull() ?: return null
+            val month = parts[1].toIntOrNull() ?: return null
+            val day = parts[2].toIntOrNull() ?: return null
+            val c = Calendar.getInstance().apply {
+                set(Calendar.YEAR, year)
+                set(Calendar.MONTH, month - 1)
+                set(Calendar.DAY_OF_MONTH, day)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+            }
+            return if (c.after(now)) c.timeInMillis else null
+        }
 
         if (repeatDays == null || repeatDays.length() == 0) {
             val c = Calendar.getInstance().apply {

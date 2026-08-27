@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/alarm.dart';
+import '../services/alarm_sound_preview.dart';
 import '../theme/app_theme.dart';
 import '../widgets/cute_widgets.dart';
 
@@ -37,12 +38,33 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     _volume = alarm?.volume ?? 1.0;
     _snoozeMinutes = alarm?.snoozeMinutes ?? 9;
     _sound = alarm?.sound ?? AlarmSound.classic;
+    AlarmSoundPreview.instance.previewingSound.addListener(_onPreviewChanged);
   }
 
   @override
   void dispose() {
+    AlarmSoundPreview.instance.previewingSound.removeListener(_onPreviewChanged);
+    if (!widget.previewOnly) {
+      AlarmSoundPreview.instance.stop();
+    }
     _labelController.dispose();
     super.dispose();
+  }
+
+  void _onPreviewChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _previewSound(AlarmSound sound) async {
+    if (widget.previewOnly) return;
+    await AlarmSoundPreview.instance.togglePreview(sound, volume: _volume);
+  }
+
+  void _selectSound(AlarmSound sound) {
+    setState(() => _sound = sound);
+    if (!widget.previewOnly) {
+      AlarmSoundPreview.instance.play(sound, volume: _volume);
+    }
   }
 
   Future<void> _pickTime() async {
@@ -77,6 +99,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
 
   void _save() {
     if (widget.previewOnly) return;
+    AlarmSoundPreview.instance.stop();
     final alarm = Alarm(
       id: widget.alarm?.id ?? const Uuid().v4(),
       hour: _time.hour,
@@ -104,7 +127,10 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
               ? null
               : IconButton(
                   icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    AlarmSoundPreview.instance.stop();
+                    Navigator.pop(context);
+                  },
                 ),
           title: Text(_isEditing ? 'Edit alarm ✏️' : 'New alarm ⏰'),
           actions: [
@@ -184,12 +210,23 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             ),
             const SizedBox(height: 28),
             const SectionTitle(title: 'Sound', emoji: '🎵'),
+            Text(
+              'Tap a sound to select & preview · use ▶ to replay',
+              style: TextStyle(
+                color: AppColors.plumSoft,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 10),
             ...AlarmSound.values.map(
               (sound) => SoundOptionCard(
                 emoji: sound.emoji,
                 label: sound.label,
                 selected: _sound == sound,
-                onTap: () => setState(() => _sound = sound),
+                isPlaying: AlarmSoundPreview.instance.isPreviewing(sound),
+                onTap: () => _selectSound(sound),
+                onPreview: widget.previewOnly ? null : () => _previewSound(sound),
               ),
             ),
             const SizedBox(height: 20),
@@ -204,7 +241,10 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
                       value: _volume,
                       onChanged: widget.previewOnly
                           ? null
-                          : (v) => setState(() => _volume = v),
+                          : (v) {
+                              setState(() => _volume = v);
+                              AlarmSoundPreview.instance.setVolume(v);
+                            },
                     ),
                   ),
                   const Text('📣', style: TextStyle(fontSize: 20)),

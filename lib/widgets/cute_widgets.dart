@@ -345,46 +345,104 @@ class SoundOptionCard extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.isPlaying = false,
+    this.onPreview,
   });
 
   final String emoji;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool isPlaying;
+  final VoidCallback? onPreview;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-          gradient: selected ? AppGradients.cardAccent : null,
-          color: selected ? null : AppColors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? Colors.transparent : AppColors.blush,
-            width: 2,
-          ),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: selected ? AppGradients.cardAccent : null,
+        color: selected ? null : AppColors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selected ? Colors.transparent : AppColors.blush,
+          width: 2,
         ),
-        child: Row(
-          children: [
-            Text(emoji, style: const TextStyle(fontSize: 24)),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: selected ? AppColors.white : AppColors.plum,
-                ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: onTap,
+              behavior: HitTestBehavior.opaque,
+              child: Row(
+                children: [
+                  Text(emoji, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: selected ? AppColors.white : AppColors.plum,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (selected)
-              const Icon(Icons.check_circle_rounded, color: AppColors.white),
-          ],
+          ),
+          if (selected)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: Icon(Icons.check_circle_rounded, color: AppColors.white),
+            ),
+          if (onPreview != null)
+            _PreviewButton(
+              isPlaying: isPlaying,
+              selected: selected,
+              onPressed: onPreview!,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewButton extends StatelessWidget {
+  const _PreviewButton({
+    required this.isPlaying,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final bool isPlaying;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.white.withValues(alpha: 0.25)
+                : AppColors.lavender.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Icon(
+            isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+            color: selected ? AppColors.white : AppColors.plum,
+            size: 24,
+          ),
         ),
       ),
     );

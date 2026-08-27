@@ -302,8 +302,7 @@ class DayChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: AppTheme.displayFont,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w600,
             fontSize: 13,
             color: selected ? AppColors.voidBlack : AppColors.muted,
           ),
@@ -328,10 +327,9 @@ class SectionTitle extends StatelessWidget {
           if (emoji != null) Text(emoji!, style: const TextStyle(fontSize: 20)),
           if (emoji != null) const SizedBox(width: 8),
           Text(
-            title.toUpperCase(),
-            style: AppTheme.display(14, weight: FontWeight.w800).copyWith(
+            title,
+            style: AppTheme.body(14, weight: FontWeight.w600).copyWith(
               color: AppColors.lime,
-              letterSpacing: 2,
             ),
           ),
         ],

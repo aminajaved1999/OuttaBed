@@ -28,26 +28,22 @@ abstract final class AppColors {
 }
 
 class AppTheme {
-  static const displayFont = 'Syne';
-  static const bodyFont = 'DMSans';
+  static TextStyle display(double size, {FontWeight weight = FontWeight.w600}) =>
+      TextStyle(fontSize: size, fontWeight: weight, height: 1.15, letterSpacing: 0);
 
-  static TextStyle display(double size, {FontWeight weight = FontWeight.w800}) =>
-      TextStyle(fontFamily: displayFont, fontSize: size, fontWeight: weight, height: 1.0);
-
-  static TextStyle body(double size, {FontWeight weight = FontWeight.w500, Color? color}) =>
+  static TextStyle body(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
       TextStyle(
-        fontFamily: bodyFont,
         fontSize: size,
         fontWeight: weight,
         color: color ?? AppColors.muted,
-        height: 1.3,
+        height: 1.4,
+        letterSpacing: 0,
       );
 
   static ThemeData get dark {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      fontFamily: bodyFont,
       scaffoldBackgroundColor: AppColors.voidBlack,
       colorScheme: const ColorScheme.dark(
         primary: AppColors.lime,
@@ -58,25 +54,25 @@ class AppTheme {
         onSurface: AppColors.white,
       ),
       textTheme: TextTheme(
-        displayLarge: display(72, weight: FontWeight.w800),
-        displayMedium: display(56, weight: FontWeight.w800),
-        displaySmall: display(44, weight: FontWeight.w700),
-        headlineLarge: display(32, weight: FontWeight.w800),
-        headlineMedium: display(26, weight: FontWeight.w700),
-        headlineSmall: display(22, weight: FontWeight.w700),
-        titleLarge: body(18, weight: FontWeight.w700, color: AppColors.white),
-        titleMedium: body(16, weight: FontWeight.w600, color: AppColors.white),
-        bodyLarge: body(16, weight: FontWeight.w500),
-        bodyMedium: body(14, weight: FontWeight.w500),
-        bodySmall: body(12, weight: FontWeight.w500),
-        labelLarge: body(14, weight: FontWeight.w700, color: AppColors.lime),
+        displayLarge: display(72, weight: FontWeight.w700),
+        displayMedium: display(56, weight: FontWeight.w700),
+        displaySmall: display(44, weight: FontWeight.w600),
+        headlineLarge: display(32, weight: FontWeight.w600),
+        headlineMedium: display(26, weight: FontWeight.w600),
+        headlineSmall: display(22, weight: FontWeight.w600),
+        titleLarge: body(18, weight: FontWeight.w600, color: AppColors.white),
+        titleMedium: body(16, weight: FontWeight.w500, color: AppColors.white),
+        bodyLarge: body(16),
+        bodyMedium: body(14),
+        bodySmall: body(12),
+        labelLarge: body(14, weight: FontWeight.w600, color: AppColors.lime),
       ),
       appBarTheme: AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: AppColors.white,
-        titleTextStyle: display(22, weight: FontWeight.w800).copyWith(color: AppColors.white),
+        titleTextStyle: display(20, weight: FontWeight.w600).copyWith(color: AppColors.white),
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: AppColors.lime,

@@ -6,6 +6,7 @@ import '../models/alarm.dart';
 import '../services/alarm_sound_preview.dart';
 import '../services/native_bridge.dart';
 import '../theme/app_theme.dart';
+import '../widgets/alarm_time_picker.dart';
 import '../widgets/cute_widgets.dart';
 
 class AlarmEditScreen extends StatefulWidget {
@@ -112,38 +113,6 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     await _loadDeviceSounds();
   }
 
-  Future<void> _pickTime() async {
-    if (widget.previewOnly) return;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _time,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.lime,
-              onPrimary: AppColors.voidBlack,
-              surface: AppColors.surface,
-              onSurface: AppColors.white,
-            ),
-            timePickerTheme: TimePickerThemeData(
-              backgroundColor: AppColors.surface,
-              hourMinuteTextColor: AppColors.lime,
-              dialHandColor: AppColors.hotPink,
-              dialBackgroundColor: AppColors.voidBlack,
-              entryModeIconColor: AppColors.muted,
-            ),
-          ),
-          child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-            child: child!,
-          ),
-        );
-      },
-    );
-    if (picked != null) setState(() => _time = picked);
-  }
-
   void _toggleDay(int day) {
     HapticFeedback.selectionClick();
     setState(() {
@@ -214,33 +183,10 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
               ],
             ),
             const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _pickTime,
-              child: SoftCard(
-                padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
-                tilt: -0.015,
-                accent: AppColors.lime,
-                child: Column(
-                  children: [
-                    Text(
-                      _formatTime(_time),
-                      style: AppTheme.display(68, weight: FontWeight.w800).copyWith(
-                        color: AppColors.lime,
-                        letterSpacing: -3,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'tap to change',
-                      style: AppTheme.body(14, weight: FontWeight.w600).copyWith(
-                        color: AppColors.muted,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            AlarmTimePicker(
+              time: _time,
+              readOnly: widget.previewOnly,
+              onChanged: (time) => setState(() => _time = time),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -394,12 +340,5 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
         ),
       ),
     );
-  }
-
-  String _formatTime(TimeOfDay time) {
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour:$minute $period';
   }
 }

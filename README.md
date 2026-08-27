@@ -28,6 +28,16 @@ You fall asleep with wireless earbuds connected. They fall out during the night 
 
 ## Run on your Samsung Galaxy A53 (Android)
 
+### Quick install (no build required)
+
+Download and install the prebuilt APK from the repo:
+
+**[`apk/OuttaBed.apk`](apk/OuttaBed.apk)**
+
+Copy it to your phone and open it to install. See [`apk/README.md`](apk/README.md) for details.
+
+### Build from source
+
 ### Prerequisites
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)

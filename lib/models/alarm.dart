@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 enum AlarmSound {
-  classic('classic_alarm', 'Classic Beep'),
-  digital('digital_alarm', 'Digital Pulse');
+  classic('classic_alarm', 'Classic Beep', '🔔'),
+  digital('digital_alarm', 'Digital Pulse', '✨');
 
-  const AlarmSound(this.assetName, this.label);
+  const AlarmSound(this.assetName, this.label, this.emoji);
   final String assetName;
   final String label;
+  final String emoji;
 
   String get assetPath => 'assets/sounds/$assetName.wav';
 }

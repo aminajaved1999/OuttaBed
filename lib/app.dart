@@ -4,6 +4,7 @@ import 'screens/alarm_ring_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/alarm_storage.dart';
 import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 
 class OuttaBedApp extends StatefulWidget {
   const OuttaBedApp({super.key, this.initialAlarmId});
@@ -63,13 +64,7 @@ class _OuttaBedAppState extends State<OuttaBedApp> {
       navigatorKey: _navigatorKey,
       title: 'OuttaBed',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5C6BC0),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.light,
       home: const HomeScreen(),
     );
   }

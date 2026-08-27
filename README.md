@@ -22,6 +22,7 @@ You fall asleep with wireless earbuds connected. They fall out during the night 
 - Two built-in alarm sounds
 - Adjustable volume
 - Snooze (5 / 9 / 15 minutes)
+- Cute, modern UI with soft gradients and playful design
 - Works when the phone is locked (full-screen intent on Android)
 - Survives reboot (alarms rescheduled on boot)
 - Bluetooth-aware speaker routing
@@ -74,6 +75,10 @@ flutter build apk --release
 ```
 
 The APK will be at `build/app/outputs/flutter-apk/app-release.apk`. Transfer and install it on your phone.
+
+## UI previews
+
+See the [`screenshots/`](screenshots/) folder for app screenshots.
 
 ## iOS
 

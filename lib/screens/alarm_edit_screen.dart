@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/alarm.dart';
+import '../theme/app_theme.dart';
+import '../widgets/cute_widgets.dart';
 
 class AlarmEditScreen extends StatefulWidget {
-  const AlarmEditScreen({super.key, this.alarm});
+  const AlarmEditScreen({super.key, this.alarm, this.previewOnly = false});
 
   final Alarm? alarm;
+  final bool previewOnly;
 
   @override
   State<AlarmEditScreen> createState() => _AlarmEditScreenState();
@@ -28,8 +31,8 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
     final alarm = widget.alarm;
     _time = alarm != null
         ? TimeOfDay(hour: alarm.hour, minute: alarm.minute)
-        : const TimeOfDay(hour: 7, minute: 0);
-    _labelController = TextEditingController(text: alarm?.label ?? 'Wake up');
+        : const TimeOfDay(hour: 5, minute: 0);
+    _labelController = TextEditingController(text: alarm?.label ?? 'Rise & shine');
     _repeatDays = Set<int>.from(alarm?.repeatDays ?? {1, 2, 3, 4, 5});
     _volume = alarm?.volume ?? 1.0;
     _snoozeMinutes = alarm?.snoozeMinutes ?? 9;
@@ -43,19 +46,23 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
   }
 
   Future<void> _pickTime() async {
+    if (widget.previewOnly) return;
     final picked = await showTimePicker(
       context: context,
       initialTime: _time,
       builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
-          child: child!,
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(primary: AppColors.coral),
+          ),
+          child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: false),
+            child: child!,
+          ),
         );
       },
     );
-    if (picked != null) {
-      setState(() => _time = picked);
-    }
+    if (picked != null) setState(() => _time = picked);
   }
 
   void _toggleDay(int day) {
@@ -69,6 +76,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
   }
 
   void _save() {
+    if (widget.previewOnly) return;
     final alarm = Alarm(
       id: widget.alarm?.id ?? const Uuid().v4(),
       hour: _time.hour,
@@ -87,113 +95,182 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit alarm' : 'New alarm'),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          InkWell(
-            onTap: _pickTime,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: theme.colorScheme.surfaceContainerHighest,
+    return GradientBackground(
+      gradient: AppGradients.home,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          leading: widget.previewOnly
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+          title: Text(_isEditing ? 'Edit alarm ✏️' : 'New alarm ⏰'),
+          actions: [
+            if (!widget.previewOnly)
+              TextButton(
+                onPressed: _save,
+                child: const Text(
+                  'Save',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                ),
               ),
-              child: Center(
-                child: Text(
-                  _formatTime(_time),
-                  style: theme.textTheme.displayMedium?.copyWith(
-                    fontWeight: FontWeight.w300,
-                  ),
+          ],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+          children: [
+            GestureDetector(
+              onTap: _pickTime,
+              child: SoftCard(
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.lavender.withValues(alpha: 0.5),
+                    AppColors.blush.withValues(alpha: 0.5),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Text('☀️', style: TextStyle(fontSize: 32)),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatTime(_time),
+                      style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                            fontWeight: FontWeight.w200,
+                            color: AppColors.plum,
+                            letterSpacing: -2,
+                          ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Tap to change',
+                      style: TextStyle(
+                        color: AppColors.plumSoft,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _labelController,
-            decoration: const InputDecoration(
-              labelText: 'Label',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text('Repeat', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: List.generate(7, (index) {
-              final selected = _repeatDays.contains(index);
-              return FilterChip(
-                label: Text(Alarm.dayLabels[index]),
-                selected: selected,
-                onSelected: (_) => _toggleDay(index),
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _repeatDays.isEmpty ? 'One-time alarm' : 'Repeating alarm',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text('Alarm sound', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...AlarmSound.values.map(
-            (sound) => ListTile(
-              title: Text(sound.label),
-              leading: Radio<AlarmSound>(
-                value: sound,
-                groupValue: _sound,
-                onChanged: (value) {
-                  if (value != null) setState(() => _sound = value);
-                },
+            const SizedBox(height: 24),
+            TextField(
+              controller: _labelController,
+              readOnly: widget.previewOnly,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+              decoration: const InputDecoration(
+                labelText: 'Alarm name',
+                prefixIcon: Icon(Icons.label_outline_rounded),
               ),
-              onTap: () => setState(() => _sound = sound),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('Volume', style: theme.textTheme.titleMedium),
-          Slider(
-            value: _volume,
-            onChanged: (value) => setState(() => _volume = value),
-            divisions: 10,
-            label: '${(_volume * 100).round()}%',
-          ),
-          const SizedBox(height: 16),
-          Text('Snooze duration', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 8),
-          SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 5, label: Text('5 min')),
-              ButtonSegment(value: 9, label: Text('9 min')),
-              ButtonSegment(value: 15, label: Text('15 min')),
+            const SizedBox(height: 28),
+            const SectionTitle(title: 'Repeat days', emoji: '📅'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(7, (index) {
+                return DayChip(
+                  label: Alarm.dayLabels[index],
+                  selected: _repeatDays.contains(index),
+                  onTap: () => _toggleDay(index),
+                );
+              }),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _repeatDays.isEmpty ? 'One-time alarm' : 'Repeating alarm',
+              style: TextStyle(color: AppColors.plumSoft, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 28),
+            const SectionTitle(title: 'Sound', emoji: '🎵'),
+            ...AlarmSound.values.map(
+              (sound) => SoundOptionCard(
+                emoji: sound.emoji,
+                label: sound.label,
+                selected: _sound == sound,
+                onTap: () => setState(() => _sound = sound),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const SectionTitle(title: 'Volume', emoji: '🔊'),
+            SoftCard(
+              padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
+              child: Row(
+                children: [
+                  const Text('🤫', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: Slider(
+                      value: _volume,
+                      onChanged: widget.previewOnly
+                          ? null
+                          : (v) => setState(() => _volume = v),
+                    ),
+                  ),
+                  const Text('📣', style: TextStyle(fontSize: 20)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                '${(_volume * 100).round()}% loud',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.plumSoft,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const SectionTitle(title: 'Snooze', emoji: '💤'),
+            Row(
+              children: [5, 9, 15].map((mins) {
+                final selected = _snoozeMinutes == mins;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: mins != 15 ? 8 : 0),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _snoozeMinutes = mins),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: selected ? AppGradients.cardAccent : null,
+                          color: selected ? null : AppColors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: selected ? Colors.transparent : AppColors.blush,
+                            width: 2,
+                          ),
+                        ),
+                        child: Text(
+                          '$mins min',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: selected ? AppColors.white : AppColors.plumSoft,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            if (!widget.previewOnly) ...[
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: PillButton(
+                  label: _isEditing ? 'Save changes' : 'Create alarm',
+                  icon: Icons.check_rounded,
+                  onPressed: _save,
+                ),
+              ),
             ],
-            selected: {_snoozeMinutes},
-            onSelectionChanged: (selection) {
-              setState(() => _snoozeMinutes = selection.first);
-            },
-          ),
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: _save,
-            child: Text(_isEditing ? 'Save changes' : 'Create alarm'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

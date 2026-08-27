@@ -1,0 +1,33 @@
+name: outta_bed
+description: Wake up reliably — alarms play through your phone speaker, not lost Bluetooth earbuds.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.3
+  flutter_local_notifications: ^19.0.0
+  android_alarm_manager_plus: ^4.0.7
+  just_audio: ^0.10.4
+  audio_session: ^0.2.1
+  permission_handler: ^12.0.0+1
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  timezone: ^0.10.0
+  wakelock_plus: ^1.3.2
+  flutter_timezone: ^4.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/

@@ -1,0 +1,5 @@
+{
+  "name": "OuttaBed Flutter",
+  "install": "git clone https://github.com/flutter/flutter.git -b stable --depth 1 /home/ubuntu/flutter 2>/dev/null || true && export PATH=\"/home/ubuntu/flutter/bin:$PATH\" && flutter pub get",
+  "terminals": []
+}

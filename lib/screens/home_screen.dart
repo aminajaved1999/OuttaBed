@@ -118,6 +118,24 @@ class _HomeScreenState extends State<HomeScreen>
     setState(() => _alarms = updated);
   }
 
+  Future<void> _confirmDeleteAlarm(Alarm alarm) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: const Text('delete this alarm?'),
+        content: Text('${alarm.timeLabel} is gonna vanish'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('nah')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('yeet')),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _deleteAlarm(alarm);
+    }
+  }
+
   Future<void> _deleteAlarm(Alarm alarm) async {
     if (widget.previewAlarms != null) {
       setState(() => _alarms = _alarms.where((a) => a.id != alarm.id).toList());
@@ -179,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen>
                               alarm: alarm,
                               onToggle: (v) => _toggleAlarm(alarm, v),
                               onTap: () => _openEditor(alarm),
-                              onDelete: () => _deleteAlarm(alarm),
+                              onDelete: () => _confirmDeleteAlarm(alarm),
                             );
                           },
                         ),
@@ -319,7 +337,7 @@ class _AlarmCard extends StatelessWidget {
   final Alarm alarm;
   final ValueChanged<bool> onToggle;
   final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final Future<void> Function() onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -338,21 +356,9 @@ class _AlarmCard extends StatelessWidget {
         child: const Icon(Icons.delete_outline_rounded, color: AppColors.white, size: 28),
       ),
       confirmDismiss: (_) async {
-        return await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                title: const Text('delete this alarm?'),
-                content: Text('${alarm.timeLabel} is gonna vanish'),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('nah')),
-                  FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('yeet')),
-                ],
-              ),
-            ) ??
-            false;
+        await onDelete();
+        return false;
       },
-      onDismissed: (_) => onDelete(),
       child: SoftCard(
         onTap: onTap,
         tilt: alarm.enabled ? 0.015 : -0.01,
@@ -390,6 +396,16 @@ class _AlarmCard extends StatelessWidget {
                 ],
               ),
             ),
+            IconButton(
+              onPressed: () => onDelete(),
+              tooltip: 'delete alarm',
+              icon: const Icon(Icons.delete_outline_rounded, color: AppColors.rose),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.surface,
+                side: const BorderSide(color: AppColors.stroke),
+              ),
+            ),
+            const SizedBox(width: 8),
             CuteToggle(value: alarm.enabled, onChanged: onToggle),
           ],
         ),

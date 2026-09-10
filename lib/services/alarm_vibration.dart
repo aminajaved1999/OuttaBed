@@ -23,24 +23,19 @@ class AlarmVibration {
 
     final hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator == true) {
-      final hasAmplitude = await Vibration.hasAmplitudeControl();
-      const pattern = [0, 600, 300, 600, 300, 800];
-
-      if (hasAmplitude == true) {
-        await Vibration.vibrate(
-          pattern: pattern,
-          intensities: [0, 200, 0, 255, 0, 255],
-          repeat: 0,
-        );
-      } else {
-        await Vibration.vibrate(pattern: pattern, repeat: 0);
-      }
+      // Repeating one-shot pulses are more reliable than patterns on Samsung.
+      _pulseTimer = Timer.periodic(const Duration(milliseconds: 1100), (_) async {
+        if (!_running) return;
+        await Vibration.vibrate(duration: 700);
+        await HapticFeedback.heavyImpact();
+      });
+      await Vibration.vibrate(duration: 700);
+    } else {
+      _pulseTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+        if (!_running) return;
+        await HapticFeedback.heavyImpact();
+      });
     }
-
-    _pulseTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      if (!_running) return;
-      await HapticFeedback.heavyImpact();
-    });
   }
 
   Future<void> stop() async {

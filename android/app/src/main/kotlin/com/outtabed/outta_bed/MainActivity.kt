@@ -106,6 +106,7 @@ class MainActivity : FlutterFragmentActivity() {
                         AlarmRingService.stop(this)
                         AlarmFallbackRinger.stop(this)
                         AlarmRinger.stop(this)
+                        AlarmVibrator.forceStop()
                         result.success(null)
                     }
                     "startNativeVibration" -> {

@@ -17,10 +17,10 @@ class AlarmTimePicker extends StatefulWidget {
   final bool readOnly;
 
   @override
-  State<AlarmTimePicker> createState() => _AlarmTimePickerState();
+  State<AlarmTimePicker> createState() => AlarmTimePickerState();
 }
 
-class _AlarmTimePickerState extends State<AlarmTimePicker> {
+class AlarmTimePickerState extends State<AlarmTimePicker> {
   late int _hour12;
   late int _minute;
   late bool _isPm;
@@ -37,6 +37,18 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     _hourController = TextEditingController();
     _minuteController = TextEditingController();
     _syncFromTime(widget.time);
+    _hourFocus.addListener(() {
+      if (!_hourFocus.hasFocus) _commitHour();
+    });
+    _minuteFocus.addListener(() {
+      if (!_minuteFocus.hasFocus) _commitMinute();
+    });
+  }
+
+  /// Applies any typed-but-uncommitted hour/minute values.
+  void applyPending() {
+    _commitHour();
+    _commitMinute();
   }
 
   @override
@@ -120,6 +132,26 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     _emitChange();
   }
 
+  void _onHourTextChanged(String value) {
+    if (value.isEmpty) return;
+    final parsed = int.tryParse(value);
+    if (parsed == null) return;
+    final clamped = parsed.clamp(1, 12);
+    if (_hour12 == clamped) return;
+    setState(() => _hour12 = clamped);
+    _emitChange();
+  }
+
+  void _onMinuteTextChanged(String value) {
+    if (value.isEmpty) return;
+    final parsed = int.tryParse(value);
+    if (parsed == null) return;
+    final clamped = parsed.clamp(0, 59);
+    if (_minute == clamped) return;
+    setState(() => _minute = clamped);
+    _emitChange();
+  }
+
   void _setPeriod(bool isPm) {
     if (widget.readOnly || _isPm == isPm) return;
     HapticFeedback.selectionClick();
@@ -163,6 +195,7 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
                   onIncrement: () => _bumpHour(1),
                   onSubmitted: _commitHour,
                   onEditingComplete: _commitHour,
+                  onChanged: _onHourTextChanged,
                   onTap: () => _hourController.selection = TextSelection(
                     baseOffset: 0,
                     extentOffset: _hourController.text.length,
@@ -186,6 +219,7 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
                   onIncrement: () => _bumpMinute(1),
                   onSubmitted: _commitMinute,
                   onEditingComplete: _commitMinute,
+                  onChanged: _onMinuteTextChanged,
                   onTap: () => _minuteController.selection = TextSelection(
                     baseOffset: 0,
                     extentOffset: _minuteController.text.length,
@@ -215,6 +249,7 @@ class _StepperColumn extends StatelessWidget {
     required this.onIncrement,
     required this.onSubmitted,
     required this.onEditingComplete,
+    required this.onChanged,
     required this.onTap,
     required this.readOnly,
   });
@@ -226,6 +261,7 @@ class _StepperColumn extends StatelessWidget {
   final VoidCallback onIncrement;
   final VoidCallback onSubmitted;
   final VoidCallback onEditingComplete;
+  final ValueChanged<String> onChanged;
   final VoidCallback onTap;
   final bool readOnly;
 
@@ -270,6 +306,7 @@ class _StepperColumn extends StatelessWidget {
               fillColor: AppColors.surface,
             ),
             onTap: readOnly ? null : onTap,
+            onChanged: readOnly ? null : onChanged,
             onSubmitted: readOnly ? null : (_) => onSubmitted(),
             onEditingComplete: readOnly ? null : onEditingComplete,
           ),

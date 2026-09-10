@@ -24,10 +24,11 @@ Also make sure **alarm volume** is turned up (press volume rocker → tap the al
 
 ## What's new in this build
 
-- **Type your time** — tap the hour/minute boxes and type `12` and `30` directly
-- **Alarm actually rings** — triple-layer sound (native service + in-app ringer + Flutter audio) plus vibration
+- **Type your time** — tap hour/minute and type `12` / `30`; saves correctly when you hit save
+- **Delete alarms** — trash icon on each alarm card (or swipe left)
+- **Alarm rings + vibrates** — stronger vibration with Samsung fallbacks
 - Pick a **specific date** for one-time alarms
-- Sound preview plays through earbuds; speaker lock only when alarm fires
+- Sound preview through earbuds; speaker lock only when alarm fires
 - Wake-up math challenge before dismiss
 
 ## Version

@@ -20,6 +20,7 @@ class AlarmEditScreen extends StatefulWidget {
 }
 
 class _AlarmEditScreenState extends State<AlarmEditScreen> {
+  final _timePickerKey = GlobalKey<AlarmTimePickerState>();
   late TimeOfDay _time;
   late TextEditingController _labelController;
   late Set<int> _repeatDays;
@@ -187,6 +188,8 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
 
   void _save() {
     if (widget.previewOnly) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    _timePickerKey.currentState?.applyPending();
     AlarmSoundPreview.instance.stop();
     final alarm = Alarm(
       id: widget.alarm?.id ?? const Uuid().v4(),
@@ -249,6 +252,7 @@ class _AlarmEditScreenState extends State<AlarmEditScreen> {
             ),
             const SizedBox(height: 20),
             AlarmTimePicker(
+              key: _timePickerKey,
               time: _time,
               readOnly: widget.previewOnly,
               onChanged: (time) => setState(() => _time = time),

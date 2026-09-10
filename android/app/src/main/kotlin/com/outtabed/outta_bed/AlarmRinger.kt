@@ -9,9 +9,6 @@ import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 
 /**
  * Shared alarm audio + vibration used by the foreground service, fallback ringer,
@@ -20,7 +17,6 @@ import android.os.VibratorManager
 object AlarmRinger {
     private var mediaPlayer: MediaPlayer? = null
     private var ringtone: Ringtone? = null
-    private var vibrator: Vibrator? = null
     private var audioFocusRequest: AudioFocusRequest? = null
     private var legacyAudioFocusListener: AudioManager.OnAudioFocusChangeListener? = null
 
@@ -91,32 +87,11 @@ object AlarmRinger {
     }
 
     fun startVibration(context: Context) {
-        if (vibrator != null) return
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            manager.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        }
-        val pattern = longArrayOf(0, 700, 250, 700, 250, 900)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(
-                VibrationEffect.createWaveform(pattern, 0),
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build(),
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            vibrator?.vibrate(pattern, 0)
-        }
+        AlarmVibrator.start(context.applicationContext)
     }
 
     fun stopVibration() {
-        vibrator?.cancel()
-        vibrator = null
+        AlarmVibrator.stop()
     }
 
     fun playSound(context: Context, soundUri: String?, volume: Float) {

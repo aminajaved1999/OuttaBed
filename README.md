@@ -10,22 +10,25 @@ You fall asleep with wireless earbuds connected. They fall out during the night 
 
 ## How OuttaBed helps
 
-1. Set your wake-up time (with recurring days, custom label, volume, and sound).
-2. At alarm time, the app wakes your device and opens a full-screen alarm screen.
-3. Audio is **forced to the phone speaker** via platform-specific routing (speakerphone on Android, speaker override on iOS).
-4. Snooze or dismiss when you're awake.
+1. Set your wake-up time (type it in or use +/- buttons).
+2. Pick weekly repeat days **or** a specific one-time date.
+3. At alarm time, the app wakes your device and opens a full-screen alarm screen.
+4. Audio is **forced to the phone speaker** with **vibration** (multi-layer playback so it actually rings).
+5. Solve a quick math challenge, then snooze or dismiss.
 
 ## Features
 
-- Set alarm time with AM/PM picker
-- Recurring alarms (select days of the week)
-- Two built-in alarm sounds
-- Adjustable volume
-- Snooze (5 / 9 / 15 minutes)
-- Cute, modern UI with soft gradients and playful design
+- **Type or tap** to set hour and minute (no endless +/- tapping)
+- Weekly recurring alarms or **pick a specific date** for one-time alarms
+- Built-in alarm sounds plus your phone's alarm tones
+- Sound preview through earbuds; speaker lock only when the alarm fires
+- **Sound + vibration** together during the alarm
+- Adjustable volume and snooze (5 / 9 / 15 minutes)
+- Wake-up math challenge before dismiss
+- Permission prompts on first open (notifications, exact alarms, full-screen, battery)
+- Dark neon UI with system fonts
 - Works when the phone is locked (full-screen intent on Android)
 - Survives reboot (alarms rescheduled on boot)
-- Bluetooth-aware speaker routing
 
 ## Run on your Samsung Galaxy A53 (Android)
 
@@ -39,42 +42,39 @@ Copy it to your phone and open it to install. See [`apk/README.md`](apk/README.m
 
 ### Build from source
 
-### Prerequisites
+#### Prerequisites
 
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (stable channel)
 - Android Studio or Android SDK with platform tools
 - USB debugging enabled on your phone
 
-### Steps
+#### Steps
 
 ```bash
-# Clone and enter the project
-git clone <your-repo-url>
+git clone https://github.com/aminajaved1999/OuttaBed.git
 cd OuttaBed
-
-# Install dependencies
 flutter pub get
-
-# Connect your Galaxy A53 via USB, then:
 flutter devices
 flutter run
 ```
 
 ### First launch permissions
 
-On first run, grant:
+Grant all of these when prompted — alarms will not ring reliably without them:
 
-- **Notifications** — required to show the alarm
-- **Alarms & reminders** (exact alarms) — required for precise wake-up time on Android 12+
-- **Full-screen intent** — allows the alarm screen over the lock screen (Settings → Apps → OuttaBed → Allow full screen)
+- **Notifications**
+- **Alarms & reminders** (exact alarms)
+- **Full-screen intent** (Settings → Apps → OuttaBed → Allow full screen)
+- **Battery optimization** — set to Unrestricted for OuttaBed
+
+Also check that your **alarm volume** is not muted (volume rocker → alarm icon).
 
 ### Build a release APK
 
 ```bash
 flutter build apk --release
+cp build/app/outputs/flutter-apk/app-release.apk apk/OuttaBed.apk
 ```
-
-The APK will be at `build/app/outputs/flutter-apk/app-release.apk`. Transfer and install it on your phone.
 
 ## UI previews
 
@@ -94,23 +94,30 @@ iOS alarm timing is less exact than Android due to platform restrictions, but sp
 lib/
   main.dart                 # App entry + initialization
   app.dart                  # Root widget + alarm screen navigation
-  alarm_callback.dart       # Background alarm trigger (Android)
   models/alarm.dart         # Alarm data model
   services/
     alarm_storage.dart      # Persist alarms locally
     alarm_scheduler.dart    # Schedule exact alarms
-    alarm_audio_player.dart # Loop alarm sound
+    alarm_audio_player.dart # Loop alarm sound (Flutter layer)
+    alarm_vibration.dart    # Vibration + haptics
+    native_bridge.dart      # Android native alarm + permissions
     notification_service.dart
-    speaker_routing.dart    # Platform channel for speaker output
+    permission_service.dart
+    speaker_routing.dart
   screens/
     home_screen.dart        # Alarm list
     alarm_edit_screen.dart  # Create / edit alarm
     alarm_ring_screen.dart  # Full-screen ringing UI
+  widgets/
+    alarm_time_picker.dart  # Type-or-tap time picker
+android/.../AlarmRingService.kt   # Foreground alarm service
+android/.../AlarmRinger.kt        # In-app sound + vibration
+apk/OuttaBed.apk                  # Prebuilt release APK
 ```
 
 ## Technical notes
 
-- **Android**: Uses `android_alarm_manager_plus` for exact alarms, `flutter_local_notifications` with full-screen intent, and native Kotlin code to enable speakerphone and stop Bluetooth SCO before playback.
+- **Android**: Uses `AlarmManager.setAlarmClock`, a foreground `AlarmRingService`, `AlarmRinger` for in-app playback, Flutter `just_audio` as a fallback layer, and native vibration. Speakerphone is forced at alarm time only.
 - **iOS**: Uses scheduled local notifications and `AVAudioSession.overrideOutputAudioPort(.speaker)` for speaker routing.
 - Alarm audio uses `AndroidAudioUsage.alarm` so it respects the alarm stream volume.
 

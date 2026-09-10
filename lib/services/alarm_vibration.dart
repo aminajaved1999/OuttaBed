@@ -19,23 +19,22 @@ class AlarmVibration {
 
     if (Platform.isAndroid) {
       await NativeBridge.instance.startNativeVibration();
-      return;
     }
 
     final hasVibrator = await Vibration.hasVibrator();
-    if (hasVibrator != true) return;
+    if (hasVibrator == true) {
+      final hasAmplitude = await Vibration.hasAmplitudeControl();
+      const pattern = [0, 600, 300, 600, 300, 800];
 
-    final hasAmplitude = await Vibration.hasAmplitudeControl();
-    const pattern = [0, 600, 300, 600, 300, 800];
-
-    if (hasAmplitude == true) {
-      await Vibration.vibrate(
-        pattern: pattern,
-        intensities: [0, 200, 0, 255, 0, 255],
-        repeat: 0,
-      );
-    } else {
-      await Vibration.vibrate(pattern: pattern, repeat: 0);
+      if (hasAmplitude == true) {
+        await Vibration.vibrate(
+          pattern: pattern,
+          intensities: [0, 200, 0, 255, 0, 255],
+          repeat: 0,
+        );
+      } else {
+        await Vibration.vibrate(pattern: pattern, repeat: 0);
+      }
     }
 
     _pulseTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
@@ -50,8 +49,7 @@ class AlarmVibration {
     _pulseTimer = null;
     if (Platform.isAndroid) {
       await NativeBridge.instance.stopNativeVibration();
-    } else {
-      await Vibration.cancel();
     }
+    await Vibration.cancel();
   }
 }

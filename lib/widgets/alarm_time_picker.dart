@@ -24,25 +24,46 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
   late int _hour12;
   late int _minute;
   late bool _isPm;
+  late TextEditingController _hourController;
+  late TextEditingController _minuteController;
+  late FocusNode _hourFocus;
+  late FocusNode _minuteFocus;
 
   @override
   void initState() {
     super.initState();
+    _hourFocus = FocusNode();
+    _minuteFocus = FocusNode();
+    _hourController = TextEditingController();
+    _minuteController = TextEditingController();
     _syncFromTime(widget.time);
   }
 
   @override
   void didUpdateWidget(covariant AlarmTimePicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.time != widget.time) {
+    if (oldWidget.time != widget.time &&
+        !_hourFocus.hasFocus &&
+        !_minuteFocus.hasFocus) {
       setState(() => _syncFromTime(widget.time));
     }
+  }
+
+  @override
+  void dispose() {
+    _hourController.dispose();
+    _minuteController.dispose();
+    _hourFocus.dispose();
+    _minuteFocus.dispose();
+    super.dispose();
   }
 
   void _syncFromTime(TimeOfDay time) {
     _hour12 = time.hour % 12 == 0 ? 12 : time.hour % 12;
     _minute = time.minute;
     _isPm = time.hour >= 12;
+    _hourController.text = _hour12.toString().padLeft(2, '0');
+    _minuteController.text = _minute.toString().padLeft(2, '0');
   }
 
   void _emitChange() {
@@ -56,6 +77,7 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     HapticFeedback.selectionClick();
     setState(() {
       _hour12 = (_hour12 + delta - 1) % 12 + 1;
+      _hourController.text = _hour12.toString().padLeft(2, '0');
     });
     _emitChange();
   }
@@ -65,6 +87,35 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
     HapticFeedback.selectionClick();
     setState(() {
       _minute = (_minute + delta + 60) % 60;
+      _minuteController.text = _minute.toString().padLeft(2, '0');
+    });
+    _emitChange();
+  }
+
+  void _commitHour() {
+    final parsed = int.tryParse(_hourController.text.trim());
+    if (parsed == null) {
+      _hourController.text = _hour12.toString().padLeft(2, '0');
+      return;
+    }
+    final clamped = parsed.clamp(1, 12);
+    setState(() {
+      _hour12 = clamped;
+      _hourController.text = clamped.toString().padLeft(2, '0');
+    });
+    _emitChange();
+  }
+
+  void _commitMinute() {
+    final parsed = int.tryParse(_minuteController.text.trim());
+    if (parsed == null) {
+      _minuteController.text = _minute.toString().padLeft(2, '0');
+      return;
+    }
+    final clamped = parsed.clamp(0, 59);
+    setState(() {
+      _minute = clamped;
+      _minuteController.text = clamped.toString().padLeft(2, '0');
     });
     _emitChange();
   }
@@ -105,10 +156,17 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
               Expanded(
                 child: _StepperColumn(
                   label: 'hour',
-                  value: _hour12.toString().padLeft(2, '0'),
+                  controller: _hourController,
+                  focusNode: _hourFocus,
                   readOnly: widget.readOnly,
                   onDecrement: () => _bumpHour(-1),
                   onIncrement: () => _bumpHour(1),
+                  onSubmitted: _commitHour,
+                  onEditingComplete: _commitHour,
+                  onTap: () => _hourController.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: _hourController.text.length,
+                  ),
                 ),
               ),
               Padding(
@@ -121,10 +179,17 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
               Expanded(
                 child: _StepperColumn(
                   label: 'min',
-                  value: _minute.toString().padLeft(2, '0'),
+                  controller: _minuteController,
+                  focusNode: _minuteFocus,
                   readOnly: widget.readOnly,
                   onDecrement: () => _bumpMinute(-1),
                   onIncrement: () => _bumpMinute(1),
+                  onSubmitted: _commitMinute,
+                  onEditingComplete: _commitMinute,
+                  onTap: () => _minuteController.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: _minuteController.text.length,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -144,16 +209,24 @@ class _AlarmTimePickerState extends State<AlarmTimePicker> {
 class _StepperColumn extends StatelessWidget {
   const _StepperColumn({
     required this.label,
-    required this.value,
+    required this.controller,
+    required this.focusNode,
     required this.onDecrement,
     required this.onIncrement,
+    required this.onSubmitted,
+    required this.onEditingComplete,
+    required this.onTap,
     required this.readOnly,
   });
 
   final String label;
-  final String value;
+  final TextEditingController controller;
+  final FocusNode focusNode;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final VoidCallback onSubmitted;
+  final VoidCallback onEditingComplete;
+  final VoidCallback onTap;
   final bool readOnly;
 
   @override
@@ -164,9 +237,42 @@ class _StepperColumn extends StatelessWidget {
         const SizedBox(height: 8),
         _StepperButton(icon: Icons.remove_rounded, onTap: readOnly ? null : onDecrement),
         const SizedBox(height: 6),
-        Text(
-          value,
-          style: AppTheme.display(32, weight: FontWeight.w700).copyWith(color: AppColors.white),
+        SizedBox(
+          width: 72,
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            readOnly: readOnly,
+            enabled: !readOnly,
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(2),
+            ],
+            style: AppTheme.display(32, weight: FontWeight.w700).copyWith(color: AppColors.white),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.stroke),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.stroke),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.lime, width: 2),
+              ),
+              filled: true,
+              fillColor: AppColors.surface,
+            ),
+            onTap: readOnly ? null : onTap,
+            onSubmitted: readOnly ? null : (_) => onSubmitted(),
+            onEditingComplete: readOnly ? null : onEditingComplete,
+          ),
         ),
         const SizedBox(height: 6),
         _StepperButton(icon: Icons.add_rounded, onTap: readOnly ? null : onIncrement),

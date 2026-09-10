@@ -8,8 +8,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
-import android.media.AudioDeviceInfo
-import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
@@ -37,7 +35,9 @@ class AlarmRingService : Service() {
         try {
             acquireWakeLock()
             startForeground(NOTIFICATION_ID, buildNotification(alarmId, label))
-            routeToSpeaker()
+            AlarmRinger.ensureAlarmAudible(this)
+            AlarmRinger.routeToSpeaker(this)
+            AlarmRinger.requestAudioFocus(this)
             playAlarmSound(soundUri, volume)
             startVibration()
             launchAlarmUi(alarmId)
@@ -55,19 +55,6 @@ class AlarmRingService : Service() {
             PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "outtabed:alarm",
         ).apply { acquire(10 * 60 * 1000L) }
-    }
-
-    private fun routeToSpeaker() {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioManager.mode = AudioManager.MODE_NORMAL
-        audioManager.stopBluetoothSco()
-        audioManager.isBluetoothScoOn = false
-        audioManager.isSpeakerphoneOn = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            audioManager.availableCommunicationDevices
-                .firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                ?.let { audioManager.setCommunicationDevice(it) }
-        }
     }
 
     private fun startVibration() {
@@ -100,7 +87,8 @@ class AlarmRingService : Service() {
 
     private fun playAlarmSound(soundUri: String?, volume: Float) {
         stopPlayer()
-        val uri = resolveSoundUri(soundUri)
+        val uri = AlarmRinger.resolveSoundUri(this, soundUri)
+        val clampedVolume = volume.coerceIn(0f, 1f)
 
         try {
             mediaPlayer = MediaPlayer().apply {
@@ -112,34 +100,19 @@ class AlarmRingService : Service() {
                 )
                 setDataSource(this@AlarmRingService, uri)
                 isLooping = true
-                setVolume(volume.coerceIn(0f, 1f), volume.coerceIn(0f, 1f))
+                setVolume(clampedVolume, clampedVolume)
                 prepare()
                 start()
             }
         } catch (error: Exception) {
             android.util.Log.e("OuttaBedAlarm", "MediaPlayer failed, using ringtone", error)
-            val ringtone = android.media.RingtoneManager.getRingtone(this, uri)
+            val ringtone = RingtoneManager.getRingtone(this, uri)
             ringtone?.audioAttributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
             ringtone?.play()
         }
-    }
-
-    private fun resolveSoundUri(soundUri: String?): Uri {
-        if (!soundUri.isNullOrBlank()) {
-            if (soundUri.startsWith("asset://")) {
-                val rawName = soundUri.removePrefix("asset://")
-                val resId = resources.getIdentifier(rawName, "raw", packageName)
-                if (resId != 0) {
-                    return Uri.parse("android.resource://$packageName/$resId")
-                }
-            }
-            return Uri.parse(soundUri)
-        }
-        return RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
     }
 
     private fun launchAlarmUi(alarmId: String) {
@@ -187,6 +160,7 @@ class AlarmRingService : Service() {
         ).apply {
             description = "Alarm notifications"
             setSound(null, null)
+            enableVibration(true)
         }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
@@ -203,6 +177,7 @@ class AlarmRingService : Service() {
     override fun onDestroy() {
         stopPlayer()
         stopVibration()
+        AlarmRinger.abandonAudioFocus(this)
         AlarmFallbackRinger.stop(this)
         wakeLock?.let { if (it.isHeld) it.release() }
         wakeLock = null
@@ -220,10 +195,6 @@ class AlarmRingService : Service() {
         fun stop(context: Context) {
             val service = Intent(context, AlarmRingService::class.java)
             context.stopService(service)
-        }
-
-        fun stopVibration(context: Context) {
-            // no-op if service not running; vibration stops in onDestroy
         }
 
         fun start(

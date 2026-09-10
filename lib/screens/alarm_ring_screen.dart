@@ -54,16 +54,24 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     await WakelockPlus.enable();
     await AlarmStorage.instance.setRingingAlarmId(widget.alarm.id);
 
-    await AlarmVibration.instance.start();
     if (Platform.isAndroid) {
-      // Ensure native ring service is running (receiver may have been blocked).
+      // In-app native ringer + vibration (works when ring screen is visible).
+      await NativeBridge.instance.ringAlarmInApp(
+        soundUri: widget.alarm.nativeSoundUri,
+        volume: widget.alarm.volume,
+      );
+      await AlarmVibration.instance.start();
+      // Foreground service keeps alarm alive if the app is backgrounded.
       await NativeBridge.instance.triggerAlarmNow(
         alarmId: widget.alarm.id,
         label: widget.alarm.label,
         soundUri: widget.alarm.nativeSoundUri,
         volume: widget.alarm.volume,
       );
+      // Flutter audio layer as final fallback on stubborn devices.
+      await AlarmAudioPlayer.instance.play(widget.alarm);
     } else {
+      await AlarmVibration.instance.start();
       await AlarmAudioPlayer.instance.play(widget.alarm);
     }
   }

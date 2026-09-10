@@ -104,13 +104,16 @@ class MainActivity : FlutterFragmentActivity() {
                     }
                     "stopNativeAlarm" -> {
                         AlarmRingService.stop(this)
+                        AlarmFallbackRinger.stop(this)
+                        AlarmRinger.stop(this)
                         result.success(null)
                     }
                     "startNativeVibration" -> {
-                        // Vibration starts with alarm service; no-op when called standalone.
+                        AlarmRinger.startVibration(this)
                         result.success(null)
                     }
                     "stopNativeVibration" -> {
+                        AlarmRinger.stopVibration()
                         result.success(null)
                     }
                     "triggerAlarmNow" -> {
@@ -119,6 +122,12 @@ class MainActivity : FlutterFragmentActivity() {
                         val soundUri = call.argument<String>("soundUri")
                         val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
                         AlarmRingService.start(this, alarmId, label, soundUri, volume)
+                        result.success(null)
+                    }
+                    "ringAlarmInApp" -> {
+                        val soundUri = call.argument<String>("soundUri")
+                        val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
+                        AlarmRinger.ring(this, soundUri, volume, vibrate = true)
                         result.success(null)
                     }
                     "pickDeviceAlarmSound" -> {

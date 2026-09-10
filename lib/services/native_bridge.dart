@@ -89,6 +89,18 @@ class NativeBridge {
     });
   }
 
+  /// Plays alarm sound + vibration directly (used when ring screen is open).
+  Future<void> ringAlarmInApp({
+    String? soundUri,
+    required double volume,
+  }) async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('ringAlarmInApp', {
+      'soundUri': soundUri,
+      'volume': volume,
+    });
+  }
+
   Future<DeviceSound?> pickDeviceAlarmSound() async {
     if (!Platform.isAndroid) return null;
     final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(

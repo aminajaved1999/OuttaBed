@@ -13,23 +13,24 @@ class AlarmVibration {
   Timer? _pulseTimer;
   bool _running = false;
 
-  Future<void> start() async {
+  Future<void> start({String label = 'OuttaBed'}) async {
     if (_running) return;
     _running = true;
 
     if (Platform.isAndroid) {
-      await NativeBridge.instance.startNativeVibration();
+      // Start native vibration BEFORE any alarm audio (Samsung blocks vibrator during playback).
+      await NativeBridge.instance.startNativeVibration(label: label);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
     }
 
     final hasVibrator = await Vibration.hasVibrator();
     if (hasVibrator == true) {
-      // Repeating one-shot pulses are more reliable than patterns on Samsung.
-      _pulseTimer = Timer.periodic(const Duration(milliseconds: 1100), (_) async {
+      _pulseTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) async {
         if (!_running) return;
-        await Vibration.vibrate(duration: 700);
+        await Vibration.vibrate(duration: 800, amplitude: 255);
         await HapticFeedback.heavyImpact();
       });
-      await Vibration.vibrate(duration: 700);
+      await Vibration.vibrate(duration: 800, amplitude: 255);
     } else {
       _pulseTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
         if (!_running) return;

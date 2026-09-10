@@ -64,9 +64,9 @@ class NativeBridge {
     await _channel.invokeMethod<void>('stopNativeAlarm');
   }
 
-  Future<void> startNativeVibration() async {
+  Future<void> startNativeVibration({String label = 'OuttaBed'}) async {
     if (!Platform.isAndroid) return;
-    await _channel.invokeMethod<void>('startNativeVibration');
+    await _channel.invokeMethod<void>('startNativeVibration', {'label': label});
   }
 
   Future<void> stopNativeVibration() async {

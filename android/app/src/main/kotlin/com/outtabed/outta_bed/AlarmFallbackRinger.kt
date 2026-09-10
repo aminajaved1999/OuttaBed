@@ -23,13 +23,17 @@ object AlarmFallbackRinger {
         volume: Float,
     ) {
         val appContext = context.applicationContext
-        AlarmRinger.ring(appContext, soundUri, volume, vibrate = true)
+        AlarmVibrator.start(appContext)
+        AlarmNotificationVibration.start(appContext, label)
+        AlarmRinger.playSoundOnly(appContext, soundUri, volume)
         showNotification(appContext, alarmId, label)
         launchUi(appContext, alarmId)
     }
 
     fun stop(context: Context) {
         AlarmRinger.stop(context.applicationContext)
+        AlarmVibrator.stop()
+        AlarmNotificationVibration.stop(context.applicationContext)
         val manager = context.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(AlarmRingService.NOTIFICATION_ID)
     }

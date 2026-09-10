@@ -34,7 +34,7 @@ class AlarmRingService : Service() {
             AlarmRinger.routeToSpeaker(this)
             AlarmRinger.requestAudioFocus(this)
             playAlarmSound(soundUri, volume)
-            startVibration()
+            startVibration(label)
             launchAlarmUi(alarmId)
         } catch (error: Exception) {
             android.util.Log.e("OuttaBedAlarm", "Ring service failed, using fallback", error)
@@ -52,12 +52,14 @@ class AlarmRingService : Service() {
         ).apply { acquire(10 * 60 * 1000L) }
     }
 
-    private fun startVibration() {
+    private fun startVibration(label: String) {
         AlarmVibrator.start(this)
+        AlarmNotificationVibration.start(this, label)
     }
 
     private fun stopVibration() {
         AlarmVibrator.stop()
+        AlarmNotificationVibration.stop(this)
     }
 
     private fun playAlarmSound(soundUri: String?, volume: Float) {
@@ -122,12 +124,18 @@ class AlarmRingService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
+            .setSilent(true)
+            .setVibrate(vibrationPattern)
+            .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
             .setFullScreenIntent(fullScreenIntent, true)
             .build()
     }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        val manager = getSystemService(NotificationManager::class.java)
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+
         val channel = NotificationChannel(
             CHANNEL_ID,
             "OuttaBed Alarms",
@@ -136,8 +144,10 @@ class AlarmRingService : Service() {
             description = "Alarm notifications"
             setSound(null, null)
             enableVibration(true)
+            vibrationPattern = Companion.vibrationPattern
+            setBypassDnd(true)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
-        val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
     }
 
@@ -160,8 +170,10 @@ class AlarmRingService : Service() {
     }
 
     companion object {
-        const val CHANNEL_ID = "outta_bed_alarm_ring"
+        // v2 channel includes a locked-in vibration pattern for Samsung devices.
+        const val CHANNEL_ID = "outta_bed_alarm_ring_v2"
         const val NOTIFICATION_ID = 424242
+        private val vibrationPattern = longArrayOf(0, 900, 300, 900, 300, 1200)
         const val EXTRA_ALARM_ID = "alarm_id"
         const val EXTRA_LABEL = "label"
         const val EXTRA_SOUND_URI = "sound_uri"

@@ -107,14 +107,18 @@ class MainActivity : FlutterFragmentActivity() {
                         AlarmFallbackRinger.stop(this)
                         AlarmRinger.stop(this)
                         AlarmVibrator.forceStop()
+                        AlarmNotificationVibration.stop(this)
                         result.success(null)
                     }
                     "startNativeVibration" -> {
-                        AlarmRinger.startVibration(this)
+                        val label = call.argument<String>("label") ?: "OuttaBed"
+                        AlarmVibrator.start(this)
+                        AlarmNotificationVibration.start(this, label)
                         result.success(null)
                     }
                     "stopNativeVibration" -> {
-                        AlarmRinger.stopVibration()
+                        AlarmVibrator.stop()
+                        AlarmNotificationVibration.stop(this)
                         result.success(null)
                     }
                     "triggerAlarmNow" -> {
@@ -128,7 +132,7 @@ class MainActivity : FlutterFragmentActivity() {
                     "ringAlarmInApp" -> {
                         val soundUri = call.argument<String>("soundUri")
                         val volume = call.argument<Double>("volume")?.toFloat() ?: 1f
-                        AlarmRinger.ring(this, soundUri, volume, vibrate = true)
+                        AlarmRinger.playSoundOnly(this, soundUri, volume)
                         result.success(null)
                     }
                     "pickDeviceAlarmSound" -> {

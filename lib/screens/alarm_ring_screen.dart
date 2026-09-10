@@ -55,23 +55,20 @@ class _AlarmRingScreenState extends State<AlarmRingScreen>
     await AlarmStorage.instance.setRingingAlarmId(widget.alarm.id);
 
     if (Platform.isAndroid) {
-      // In-app native ringer + vibration (works when ring screen is visible).
+      // Vibration MUST start before audio on Samsung/Android 13+.
+      await AlarmVibration.instance.start(label: widget.alarm.label);
       await NativeBridge.instance.ringAlarmInApp(
         soundUri: widget.alarm.nativeSoundUri,
         volume: widget.alarm.volume,
       );
-      await AlarmVibration.instance.start();
-      // Foreground service keeps alarm alive if the app is backgrounded.
       await NativeBridge.instance.triggerAlarmNow(
         alarmId: widget.alarm.id,
         label: widget.alarm.label,
         soundUri: widget.alarm.nativeSoundUri,
         volume: widget.alarm.volume,
       );
-      // Flutter audio layer as final fallback on stubborn devices.
-      await AlarmAudioPlayer.instance.play(widget.alarm);
     } else {
-      await AlarmVibration.instance.start();
+      await AlarmVibration.instance.start(label: widget.alarm.label);
       await AlarmAudioPlayer.instance.play(widget.alarm);
     }
   }

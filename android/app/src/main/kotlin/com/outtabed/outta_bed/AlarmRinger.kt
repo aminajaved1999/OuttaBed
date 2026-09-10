@@ -128,6 +128,14 @@ object AlarmRinger {
         }
     }
 
+    fun playSoundOnly(context: Context, soundUri: String?, volume: Float) {
+        val appContext = context.applicationContext
+        ensureAlarmAudible(appContext)
+        routeToSpeaker(appContext)
+        requestAudioFocus(appContext)
+        playSound(appContext, soundUri, volume)
+    }
+
     fun ring(
         context: Context,
         soundUri: String?,
@@ -135,11 +143,8 @@ object AlarmRinger {
         vibrate: Boolean = true,
     ) {
         val appContext = context.applicationContext
-        ensureAlarmAudible(appContext)
-        routeToSpeaker(appContext)
-        requestAudioFocus(appContext)
         if (vibrate) startVibration(appContext)
-        playSound(appContext, soundUri, volume)
+        playSoundOnly(appContext, soundUri, volume)
     }
 
     fun stop(context: Context) {

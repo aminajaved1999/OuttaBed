@@ -22,6 +22,14 @@ Open the app and grant **every** permission it asks for:
 
 Also make sure **alarm volume** is turned up (press volume rocker → tap the alarm bell icon).
 
+### Vibration not working?
+
+On Samsung, check these phone settings:
+1. **Settings → Sounds and vibration → Vibration intensity** — turn **Ring** above 0
+2. **Settings → Sounds and vibration → Vibrate while ringing** — ON
+3. **Settings → Apps → OuttaBed → Notifications → OuttaBed Vibration** — allow vibration
+4. Reinstall the APK (creates fresh notification channels with vibration patterns)
+
 ## What's new in this build
 
 - **Type your time** — tap hour/minute and type `12` / `30`; saves correctly when you hit save
